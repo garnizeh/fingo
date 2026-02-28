@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base/fingo/
+  - ./dev-fingo-configmap.yaml
+patches:
+  - path: ./dev-fingo-patch-deploy.yaml
+  - path: ./dev-fingo-patch-service.yaml
+images:
+  - name: fingo-image
+    newName: localhost/garnizehlabs/fingo
+    newTag: 0.0.1
+  - name: metrics-image
+    newName: localhost/garnizehlabs/metrics
+    newTag: 0.0.1

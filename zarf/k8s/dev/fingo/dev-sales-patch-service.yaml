@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fingo-service
+  namespace: fingo-system
+
+spec:
+  type: ClusterIP
+
+  ports:
+    - name: fingo
+      port: 3000
+      targetPort: fingo
+    - name: fingo-debug
+      port: 3010
+      targetPort: fingo-debug
+    - name: metrics
+      port: 4000
+      targetPort: metrics
+    - name: metrics-debug
+      port: 4010
+      targetPort: metrics-debug
+    - name: prometheus
+      port: 4020
+      targetPort: metrics-prom
