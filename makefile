@@ -411,6 +411,9 @@ statsviz:
 # ==============================================================================
 # Running tests within the local computer
 
+test-up:
+	docker run -P -d --name fingotest -e POSTGRES_PASSWORD=postgres postgres:18.2
+
 test-down:
 	docker stop fingotest
 	docker rm fingotest -v

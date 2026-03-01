@@ -6,6 +6,7 @@ package build
 import (
 	"github.com/garnizeh/fingo/app/domain/auditapp"
 	"github.com/garnizeh/fingo/app/domain/checkapp"
+	"github.com/garnizeh/fingo/app/domain/creditcardapp"
 	"github.com/garnizeh/fingo/app/domain/homeapp"
 	"github.com/garnizeh/fingo/app/domain/productapp"
 	"github.com/garnizeh/fingo/app/domain/rawapp"
@@ -35,6 +36,12 @@ func (all) Add(app *web.App, cfg mux.Config) {
 		Log:        cfg.Log,
 		HomeBus:    cfg.BusConfig.HomeBus,
 		AuthClient: cfg.FinGoConfig.AuthClient,
+	})
+
+	creditcardapp.Routes(app, creditcardapp.Config{
+		Log:           cfg.Log,
+		CreditCardBus: cfg.BusConfig.CreditCardBus,
+		AuthClient:    cfg.FinGoConfig.AuthClient,
 	})
 
 	productapp.Routes(app, productapp.Config{

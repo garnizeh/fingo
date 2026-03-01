@@ -10,6 +10,7 @@ import (
 	"github.com/garnizeh/fingo/app/sdk/authclient"
 	"github.com/garnizeh/fingo/app/sdk/mid"
 	"github.com/garnizeh/fingo/business/domain/auditbus"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus"
 	"github.com/garnizeh/fingo/business/domain/homebus"
 	"github.com/garnizeh/fingo/business/domain/productbus"
 	"github.com/garnizeh/fingo/business/domain/userbus"
@@ -64,11 +65,12 @@ type AuthConfig struct {
 }
 
 type BusConfig struct {
-	AuditBus    auditbus.ExtBusiness
-	UserBus     userbus.ExtBusiness
-	ProductBus  productbus.ExtBusiness
-	HomeBus     homebus.ExtBusiness
-	VProductBus vproductbus.ExtBusiness
+	AuditBus      auditbus.ExtBusiness
+	UserBus       userbus.ExtBusiness
+	CreditCardBus creditcardbus.ExtBusiness
+	ProductBus    productbus.ExtBusiness
+	HomeBus       homebus.ExtBusiness
+	VProductBus   vproductbus.ExtBusiness
 }
 
 // Config contains all the mandatory systems required by handlers.

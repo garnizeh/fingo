@@ -36,6 +36,10 @@
 > - When asked to create a task: use `.docs/templates/task.md` as the base, name the file `pN-NNN-<slug>.md` (using the correct phase number), place it in the correct `backlog/` folder, and link it to its parent design doc.
 > - When a task is finished: move the file from `backlog/` to `done/`, set **Status: Done** and **Completed: YYYY-MM-DD** in the front matter.
 > - When all tasks for a design doc are completed (i.e., `backlog/` is empty and every task file in `done/` has `Status: Done` and a `Completed: YYYY-MM-DD`), move the entire task folder (`.docs/tasks/000-context/`) into an archive location at `.docs/tasks/done/000-context/`. Ensure the `.docs/tasks/done/` directory exists before moving and do not delete task files; this is an archival reorganization step that preserves history.
+
+> 5. **Database Test Commands:** Before running any test that requires a real database, run `make test-up` to bring up the test database environment. After the tests complete, run `make test-down` to tear down the test database. Automation scripts and Copilot helpers must follow this convention when invoking DB-backed tests.
+>
+> 6. **Existing Pattern First (Mandatory):** The agent MUST always follow the established project implementation patterns, especially the structural and testing conventions already used in `user`, `product`, and `home` domains. If a task appears to request a different approach, the agent MUST pause, explicitly explain the deviation and its impact, and obtain explicit user approval before implementing anything outside the existing pattern. In case of conflict, existing repository patterns are the default behavior until explicit approval is granted.
 >
 > Copilot and other automation should look in `/.docs/design-docs/` for the canonical design documents and in `/.docs/tasks/` for task lists and progress. If you do not agree with this policy, STOP and discuss before changing any doc storage locations.
 

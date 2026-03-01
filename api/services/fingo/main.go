@@ -23,6 +23,10 @@ import (
 	"github.com/garnizeh/fingo/business/domain/auditbus"
 	"github.com/garnizeh/fingo/business/domain/auditbus/extensions/auditotel"
 	"github.com/garnizeh/fingo/business/domain/auditbus/stores/auditdb"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus/extensions/creditcardaudit"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus/extensions/creditcardotel"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus/stores/creditcarddb"
 	"github.com/garnizeh/fingo/business/domain/homebus"
 	"github.com/garnizeh/fingo/business/domain/homebus/extensions/homeotel"
 	"github.com/garnizeh/fingo/business/domain/homebus/stores/homedb"
@@ -185,6 +189,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 	userStorage := usercache.NewStore(log, userdb.NewStore(log, db), time.Minute)
 	userBus := userbus.NewBusiness(log, delegate, userStorage, userOtelExt, userAuditExt)
 
+	creditCardOtelExt := creditcardotel.NewExtension()
+	creditCardAuditExt := creditcardaudit.NewExtension(auditBus)
+	creditCardStorage := creditcarddb.NewStore(log, db)
+	creditCardBus := creditcardbus.NewBusiness(log, userBus, delegate, creditCardStorage, creditCardOtelExt, creditCardAuditExt)
+
 	productOtelExt := productotel.NewExtension()
 	productStorage := productdb.NewStore(log, db)
 	productBus := productbus.NewBusiness(log, userBus, delegate, productStorage, productOtelExt)
@@ -264,11 +273,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 		DB:     db,
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
-			AuditBus:    auditBus,
-			UserBus:     userBus,
-			ProductBus:  productBus,
-			HomeBus:     homeBus,
-			VProductBus: vproductBus,
+			AuditBus:      auditBus,
+			UserBus:       userBus,
+			CreditCardBus: creditCardBus,
+			ProductBus:    productBus,
+			HomeBus:       homeBus,
+			VProductBus:   vproductBus,
 		},
 		FinGoConfig: mux.FinGoConfig{
 			AuthClient: authClient,

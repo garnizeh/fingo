@@ -6,6 +6,10 @@ import (
 	"github.com/garnizeh/fingo/business/domain/auditbus"
 	"github.com/garnizeh/fingo/business/domain/auditbus/extensions/auditotel"
 	"github.com/garnizeh/fingo/business/domain/auditbus/stores/auditdb"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus/extensions/creditcardaudit"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus/extensions/creditcardotel"
+	"github.com/garnizeh/fingo/business/domain/creditcardbus/stores/creditcarddb"
 	"github.com/garnizeh/fingo/business/domain/homebus"
 	"github.com/garnizeh/fingo/business/domain/homebus/extensions/homeotel"
 	"github.com/garnizeh/fingo/business/domain/homebus/stores/homedb"
@@ -27,12 +31,13 @@ import (
 
 // BusDomain represents all the business domain apis needed for testing.
 type BusDomain struct {
-	Delegate *delegate.Delegate
-	Audit    auditbus.ExtBusiness
-	Home     homebus.ExtBusiness
-	Product  productbus.ExtBusiness
-	User     userbus.ExtBusiness
-	VProduct vproductbus.ExtBusiness
+	Delegate   *delegate.Delegate
+	Audit      auditbus.ExtBusiness
+	Home       homebus.ExtBusiness
+	Product    productbus.ExtBusiness
+	CreditCard creditcardbus.ExtBusiness
+	User       userbus.ExtBusiness
+	VProduct   vproductbus.ExtBusiness
 }
 
 func newBusDomains(log *logger.Logger, db *sqlx.DB) BusDomain {
@@ -51,6 +56,11 @@ func newBusDomains(log *logger.Logger, db *sqlx.DB) BusDomain {
 	productStorage := productdb.NewStore(log, db)
 	productBus := productbus.NewBusiness(log, userBus, delegate, productStorage, productOtelExt)
 
+	creditCardOtelExt := creditcardotel.NewExtension()
+	creditCardAuditExt := creditcardaudit.NewExtension(auditBus)
+	creditCardStorage := creditcarddb.NewStore(log, db)
+	creditCardBus := creditcardbus.NewBusiness(log, userBus, delegate, creditCardStorage, creditCardOtelExt, creditCardAuditExt)
+
 	homeOtelExt := homeotel.NewExtension()
 	homeStorage := homedb.NewStore(log, db)
 	homeBus := homebus.NewBusiness(log, userBus, delegate, homeStorage, homeOtelExt)
@@ -60,11 +70,12 @@ func newBusDomains(log *logger.Logger, db *sqlx.DB) BusDomain {
 	vproductBus := vproductbus.NewBusiness(vproductStorage, vproductOtelExt)
 
 	return BusDomain{
-		Delegate: delegate,
-		Audit:    auditBus,
-		Home:     homeBus,
-		Product:  productBus,
-		User:     userBus,
-		VProduct: vproductBus,
+		Delegate:   delegate,
+		Audit:      auditBus,
+		Home:       homeBus,
+		Product:    productBus,
+		CreditCard: creditCardBus,
+		User:       userBus,
+		VProduct:   vproductBus,
 	}
 }
