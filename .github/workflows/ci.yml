@@ -39,24 +39,11 @@ jobs:
           DB_HOST: localhost
           DB_PASSWORD: postgres
 
-      - name: Run vet
-        run: CGO_ENABLED=0 go vet ./...
-
-      - name: Run staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck -checks=all ./...
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.10
           args: run --timeout 5m ./...
-
-      - name: Run gosec
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec ./...
 
       - name: Run govulncheck
         run: |
