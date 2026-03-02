@@ -14,22 +14,20 @@ linters:
     - govet
     - staticcheck
     - unused
-    - gosec        # Security (OWASP standards)
-    - bodyclose    # Checks if HTTP response bodies are closed
+    - gosec          # Security (OWASP standards)
+    - bodyclose      # Checks if HTTP response bodies are closed
     
     # Style and Consistency
-    - revive       # Modern replacement for golint
-    - gofmt
-    - goimports
-    - misspell     # Fixes typos in comments and strings
-    - whitespace   # Enforces clean trailing/leading whitespace
+    - revive         # Modern replacement for golint
+    - misspell       # Fixes typos in comments and strings
+    - whitespace     # Enforces clean trailing/leading whitespace
     
     # Code Quality (Maintainability)
-    - gocyclo      # Measures function complexity
-    - gocritic     # Style, performance, and diagnostic suggestions
-    - nakedret     # Finds naked returns in long functions
-    - prealloc     # Suggests slice pre-allocation
-    - nolintlint   # Ensures //nolint directives are properly formatted and necessary
+    - gocyclo        # Measures function complexity
+    - gocritic       # Style, performance, and diagnostic suggestions
+    - nakedret       # Finds naked returns in long functions
+    - prealloc       # Suggests slice pre-allocation
+    - nolintlint     # Ensures //nolint directives are properly formatted and necessary
 
 linters-settings:
   gofmt:
@@ -46,6 +44,11 @@ linters-settings:
     confidence: "low"
   govet:
     enable-all: true
+    enable:
+      - fieldalignment
+    settings:
+      fieldalignment:
+        print-suggested-fixes: true    
   gocritic:
     enabled-tags:
       - diagnostic
@@ -84,3 +87,13 @@ issues:
     # Allow missing docstrings in main and test files
     - path: (main\.go|.*_test\.go)
       text: "should have comment"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: fingo
