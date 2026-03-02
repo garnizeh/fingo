@@ -11,21 +11,21 @@ import (
 
 // Product represents an individual Product.
 type Product struct {
-	ID          uuid.UUID
-	UserID      uuid.UUID
+	DateCreated time.Time
+	DateUpdated time.Time
 	Name        name.Name
 	Cost        money.Money
 	Quantity    quantity.Quantity
-	DateCreated time.Time
-	DateUpdated time.Time
+	ID          uuid.UUID
+	UserID      uuid.UUID
 }
 
 // NewProduct is what we require from clients when adding a Product.
 type NewProduct struct {
-	UserID   uuid.UUID
 	Name     name.Name
 	Cost     money.Money
 	Quantity quantity.Quantity
+	UserID   uuid.UUID
 }
 
 // UpdateProduct defines what information may be provided to modify an

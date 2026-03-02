@@ -31,12 +31,12 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	nc, err := toBusNewUser(app)
+	nc, err := toBusNewUser(&app)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	usr, err := a.userBus.Create(ctx, mid.GetSubjectID(ctx), nc)
+	usr, err := a.userBus.Create(ctx, mid.GetSubjectID(ctx), &nc)
 	if err != nil {
 		if errors.Is(err, userbus.ErrUniqueEmail) {
 			return errs.New(errs.Aborted, userbus.ErrUniqueEmail)
@@ -44,7 +44,7 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "create: usr[%+v]: %s", usr, err)
 	}
 
-	return toAppUser(usr)
+	return toAppUser(&usr)
 }
 
 func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
@@ -63,12 +63,12 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "user missing in context: %s", err)
 	}
 
-	updUsr, err := a.userBus.Update(ctx, mid.GetSubjectID(ctx), usr, uu)
+	updUsr, err := a.userBus.Update(ctx, mid.GetSubjectID(ctx), &usr, uu)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "update: userID[%s] uu[%+v]: %s", usr.ID, uu, err)
 	}
 
-	return toAppUser(updUsr)
+	return toAppUser(&updUsr)
 }
 
 func (a *app) updateRole(ctx context.Context, r *http.Request) web.Encoder {
@@ -87,12 +87,12 @@ func (a *app) updateRole(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "user missing in context: %s", err)
 	}
 
-	updUsr, err := a.userBus.Update(ctx, mid.GetSubjectID(ctx), usr, uu)
+	updUsr, err := a.userBus.Update(ctx, mid.GetSubjectID(ctx), &usr, uu)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "updaterole: userID[%s] uu[%+v]: %s", usr.ID, uu, err)
 	}
 
-	return toAppUser(updUsr)
+	return toAppUser(&updUsr)
 }
 
 func (a *app) delete(ctx context.Context, _ *http.Request) web.Encoder {
@@ -101,7 +101,7 @@ func (a *app) delete(ctx context.Context, _ *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "userID missing in context: %s", err)
 	}
 
-	if err := a.userBus.Delete(ctx, mid.GetSubjectID(ctx), usr); err != nil {
+	if err := a.userBus.Delete(ctx, mid.GetSubjectID(ctx), &usr); err != nil {
 		return errs.Errorf(errs.Internal, "delete: userID[%s]: %s", usr.ID, err)
 	}
 
@@ -119,9 +119,12 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("page", err)
 	}
 
-	filter, err := parseFilter(qp)
+	filter, err := qp.parseFilter()
 	if err != nil {
-		return err.(*errs.Error)
+		if enc, ok := err.(web.Encoder); ok {
+			return enc
+		}
+		return errs.New(errs.Internal, err)
 	}
 
 	orderBy, err := order.Parse(orderByFields, qp.OrderBy, userbus.DefaultOrderBy)
@@ -148,5 +151,5 @@ func (a *app) queryByID(ctx context.Context, _ *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "querybyid: %s", err)
 	}
 
-	return toAppUser(usr)
+	return toAppUser(&usr)
 }

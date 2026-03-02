@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -18,19 +19,19 @@ type TraceIDFn func(ctx context.Context) string
 
 // Logger represents a logger for logging information.
 type Logger struct {
-	discard   bool
 	handler   slog.Handler
 	traceIDFn TraceIDFn
+	discard   bool
 }
 
 // New constructs a new log for application use.
 func New(w io.Writer, minLevel Level, serviceName string, traceIDFn TraceIDFn) *Logger {
-	return new(w, minLevel, serviceName, traceIDFn, Events{})
+	return newLogger(w, minLevel, serviceName, traceIDFn, Events{})
 }
 
 // NewWithEvents constructs a new log for application use with events.
 func NewWithEvents(w io.Writer, minLevel Level, serviceName string, traceIDFn TraceIDFn, events Events) *Logger {
-	return new(w, minLevel, serviceName, traceIDFn, events)
+	return newLogger(w, minLevel, serviceName, traceIDFn, events)
 }
 
 // NewWithHandler returns a new log for application use with the underlying
@@ -133,11 +134,12 @@ func (log *Logger) write(ctx context.Context, level Level, caller int, msg strin
 	}
 	r.Add(args...)
 
-	log.handler.Handle(ctx, r)
+	if err := log.handler.Handle(ctx, r); err != nil {
+		fmt.Fprintf(os.Stderr, "logger handle error: %v\n", err)
+	}
 }
 
-func new(w io.Writer, minLevel Level, serviceName string, traceIDFn TraceIDFn, events Events) *Logger {
-
+func newLogger(w io.Writer, minLevel Level, serviceName string, traceIDFn TraceIDFn, events Events) *Logger {
 	// Convert the file name to just the name.ext when this key/value will
 	// be logged.
 	f := func(groups []string, a slog.Attr) slog.Attr {

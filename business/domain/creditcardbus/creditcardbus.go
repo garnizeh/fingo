@@ -26,9 +26,9 @@ var (
 // retrieve data.
 type Storer interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
-	Create(ctx context.Context, cc CreditCard) error
-	Update(ctx context.Context, cc CreditCard) error
-	Delete(ctx context.Context, cc CreditCard) error
+	Create(ctx context.Context, cc *CreditCard) error
+	Update(ctx context.Context, cc *CreditCard) error
+	Delete(ctx context.Context, cc *CreditCard) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]CreditCard, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, ccID uuid.UUID) (CreditCard, error)
@@ -39,11 +39,11 @@ type Storer interface {
 type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
 	Create(ctx context.Context, actorID uuid.UUID, ncc NewCreditCard) (CreditCard, error)
-	Update(ctx context.Context, actorID uuid.UUID, cc CreditCard, ucc UpdateCreditCard) (CreditCard, error)
-	Delete(ctx context.Context, actorID uuid.UUID, cc CreditCard) error
+	Update(ctx context.Context, actorID uuid.UUID, cc *CreditCard, ucc UpdateCreditCard) (CreditCard, error)
+	Delete(ctx context.Context, actorID uuid.UUID, cc *CreditCard) error
 	Query(ctx context.Context, actorID uuid.UUID, filter QueryFilter, orderBy order.By, page page.Page) ([]CreditCard, error)
 	Count(ctx context.Context, actorID uuid.UUID, filter QueryFilter) (int, error)
-	QueryByID(ctx context.Context, actorID uuid.UUID, ccID uuid.UUID) (CreditCard, error)
+	QueryByID(ctx context.Context, actorID, ccID uuid.UUID) (CreditCard, error)
 }
 
 // Extension is a function that wraps a new layer of business logic
@@ -114,19 +114,23 @@ func (b *Business) Create(ctx context.Context, actorID uuid.UUID, ncc NewCreditC
 	now := time.Now()
 
 	cc := CreditCard{
-		ID:             uuid.New(),
-		UserID:         ncc.UserID,
-		Name:           ncc.Name,
-		Limit:          ncc.Limit,
-		ClosingDay:     ncc.ClosingDay,
-		DueDay:         ncc.DueDay,
-		LastFourDigits: ncc.LastFourDigits,
-		Enabled:        true,
-		DateCreated:    now,
-		DateUpdated:    now,
+		CreditCardTimestamps: CreditCardTimestamps{
+			DateCreated: now,
+			DateUpdated: now,
+		},
+		CreditCardIdentity: CreditCardIdentity{
+			Name:           ncc.Name,
+			LastFourDigits: ncc.LastFourDigits,
+		},
+		ID:         uuid.New(),
+		UserID:     ncc.UserID,
+		Limit:      ncc.Limit,
+		ClosingDay: ncc.ClosingDay,
+		DueDay:     ncc.DueDay,
+		Enabled:    true,
 	}
 
-	if err := b.storer.Create(ctx, cc); err != nil {
+	if err := b.storer.Create(ctx, &cc); err != nil {
 		return CreditCard{}, fmt.Errorf("create: %w", err)
 	}
 
@@ -134,7 +138,10 @@ func (b *Business) Create(ctx context.Context, actorID uuid.UUID, ncc NewCreditC
 }
 
 // Update modifies information about a credit card.
-func (b *Business) Update(ctx context.Context, actorID uuid.UUID, cc CreditCard, ucc UpdateCreditCard) (CreditCard, error) {
+func (b *Business) Update(ctx context.Context, actorID uuid.UUID, cc *CreditCard, ucc UpdateCreditCard) (CreditCard, error) {
+	if cc == nil {
+		return CreditCard{}, fmt.Errorf("credit card is nil")
+	}
 	if ucc.Limit != nil && ucc.Limit.Value() <= 0 {
 		return CreditCard{}, ErrCardLimit
 	}
@@ -165,11 +172,15 @@ func (b *Business) Update(ctx context.Context, actorID uuid.UUID, cc CreditCard,
 		return CreditCard{}, fmt.Errorf("update: %w", err)
 	}
 
-	return cc, nil
+	return *cc, nil
 }
 
 // Delete removes a credit card from the system.
-func (b *Business) Delete(ctx context.Context, actorID uuid.UUID, cc CreditCard) error {
+func (b *Business) Delete(ctx context.Context, actorID uuid.UUID, cc *CreditCard) error {
+	if cc == nil {
+		return fmt.Errorf("credit card is nil")
+	}
+
 	if err := b.storer.Delete(ctx, cc); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -198,7 +209,7 @@ func (b *Business) Count(ctx context.Context, actorID uuid.UUID, filter QueryFil
 }
 
 // QueryByID finds the credit card identified by a given ID.
-func (b *Business) QueryByID(ctx context.Context, actorID uuid.UUID, ccID uuid.UUID) (CreditCard, error) {
+func (b *Business) QueryByID(ctx context.Context, actorID, ccID uuid.UUID) (CreditCard, error) {
 	cc, err := b.storer.QueryByID(ctx, ccID)
 	if err != nil {
 		return CreditCard{}, fmt.Errorf("querybyid: %w", err)

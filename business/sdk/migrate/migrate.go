@@ -42,8 +42,8 @@ func Migrate(ctx context.Context, db *sqlx.DB) error {
 // Seed runs the seed document defined in this package against db. The queries
 // are run in a transaction and rolled back if any fail.
 func Seed(ctx context.Context, db *sqlx.DB) (err error) {
-	if err := sqldb.StatusCheck(ctx, db); err != nil {
-		return fmt.Errorf("status check database: %w", err)
+	if errStatus := sqldb.StatusCheck(ctx, db); errStatus != nil {
+		return fmt.Errorf("status check database: %w", errStatus)
 	}
 
 	tx, err := db.Begin()

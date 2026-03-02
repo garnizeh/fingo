@@ -11,15 +11,15 @@ import (
 
 type Authenticator interface {
 	Authenticate(ctx context.Context, authorization string) (AuthenticateResp, error)
-	Authorize(ctx context.Context, auth Authorize) error
+	Authorize(ctx context.Context, auth *Authorize) error
 	Close() error
 }
 
 // Authorize defines the information required to perform an authorization.
 type Authorize struct {
-	UserID uuid.UUID
-	Claims auth.Claims
 	Rule   string
+	Claims auth.Claims
+	UserID uuid.UUID
 }
 
 // Decode implements the decoder interface.
@@ -29,12 +29,13 @@ func (a *Authorize) Decode(data []byte) error {
 
 // AuthenticateResp defines the information that will be received on authenticate.
 type AuthenticateResp struct {
-	UserID uuid.UUID
 	Claims auth.Claims
+	UserID uuid.UUID
 }
 
 // Encode implements the encoder interface.
-func (ar AuthenticateResp) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(ar)
-	return data, "application/json", err
+func (ar *AuthenticateResp) Encode() (data []byte, comtentType string, err error) {
+	data, err = json.Marshal(ar)
+	comtentType = "application/json"
+	return
 }

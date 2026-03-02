@@ -21,20 +21,21 @@ type Product struct {
 	ID          string  `json:"id"`
 	UserID      string  `json:"userID"`
 	Name        string  `json:"name"`
-	Cost        float64 `json:"cost"`
-	Quantity    int     `json:"quantity"`
 	DateCreated string  `json:"dateCreated"`
 	DateUpdated string  `json:"dateUpdated"`
+	Cost        float64 `json:"cost"`
+	Quantity    int     `json:"quantity"`
 }
 
 // Encode implements the encoder interface.
-func (app Product) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(app)
-	return data, "application/json", err
+func (app *Product) Encode() (data []byte, contentType string, err error) {
+	data, err = json.Marshal(app)
+	contentType = "application/json"
+	return data, contentType, err
 }
 
-func toAppProduct(prd productbus.Product) Product {
-	return Product{
+func toAppProduct(prd *productbus.Product) *Product {
+	return &Product{
 		ID:          prd.ID.String(),
 		UserID:      prd.UserID.String(),
 		Name:        prd.Name.String(),
@@ -50,8 +51,8 @@ func toAppProduct(prd productbus.Product) Product {
 // NewTran represents an example of cross domain transaction at the
 // application layer.
 type NewTran struct {
-	Product NewProduct `json:"product"`
 	User    NewUser    `json:"user"`
+	Product NewProduct `json:"product"`
 }
 
 // Decode implements the decoder interface.
@@ -65,13 +66,13 @@ func (app *NewTran) Decode(data []byte) error {
 type NewUser struct {
 	Name            string   `json:"name"`
 	Email           string   `json:"email"`
-	Roles           []string `json:"roles"`
 	Department      string   `json:"department"`
 	Password        string   `json:"password"`
 	PasswordConfirm string   `json:"passwordConfirm"`
+	Roles           []string `json:"roles"`
 }
 
-func toBusNewUser(app NewUser) (userbus.NewUser, error) {
+func toBusNewUser(app *NewUser) (userbus.NewUser, error) {
 	var errors errs.FieldErrors
 
 	roles, err := role.ParseMany(app.Roles)

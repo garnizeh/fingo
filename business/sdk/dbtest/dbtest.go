@@ -4,7 +4,8 @@ package dbtest
 import (
 	"bytes"
 	"context"
-	"math/rand"
+	cryptorand "crypto/rand"
+	"math/big"
 	"testing"
 	"time"
 
@@ -41,13 +42,14 @@ func New(t *testing.T, testName string) *Database {
 	t.Logf("Name    : %s\n", c.Name)
 	t.Logf("HostPort: %s\n", c.HostPort)
 
-	dbM, err := sqldb.Open(sqldb.Config{
+	cfgdbM := sqldb.Config{
 		User:       "postgres",
 		Password:   "postgres",
 		Host:       c.HostPort,
 		Name:       "postgres",
 		DisableTLS: true,
-	})
+	}
+	dbM, err := sqldb.Open(&cfgdbM)
 	if err != nil {
 		t.Fatalf("Opening database connection: %v", err)
 	}
@@ -55,8 +57,8 @@ func New(t *testing.T, testName string) *Database {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := sqldb.StatusCheck(ctx, dbM); err != nil {
-		t.Fatalf("status check database: %v", err)
+	if serr := sqldb.StatusCheck(ctx, dbM); serr != nil {
+		t.Fatalf("status check database: %v", serr)
 	}
 
 	// -------------------------------------------------------------------------
@@ -64,24 +66,25 @@ func New(t *testing.T, testName string) *Database {
 	const letterBytes = "abcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, 4)
 	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+		b[i] = letterBytes[randomInt(len(letterBytes))]
 	}
 	dbName := string(b)
 
 	t.Logf("Create Database: %s\n", dbName)
-	if _, err := dbM.ExecContext(context.Background(), "CREATE DATABASE "+dbName); err != nil {
-		t.Fatalf("creating database %s: %v", dbName, err)
+	if _, eerr := dbM.ExecContext(context.Background(), "CREATE DATABASE "+dbName); eerr != nil {
+		t.Fatalf("creating database %s: %v", dbName, eerr)
 	}
 
 	// -------------------------------------------------------------------------
 
-	db, err := sqldb.Open(sqldb.Config{
+	cfgdb := sqldb.Config{
 		User:       "postgres",
 		Password:   "postgres",
 		Host:       c.HostPort,
 		Name:       dbName,
 		DisableTLS: true,
-	})
+	}
+	db, err := sqldb.Open(&cfgdb)
 	if err != nil {
 		t.Fatalf("Opening database connection: %v", err)
 	}
@@ -107,8 +110,13 @@ func New(t *testing.T, testName string) *Database {
 			t.Fatalf("dropping database %s: %v", dbName, err)
 		}
 
-		db.Close()
-		dbM.Close()
+		if err := db.Close(); err != nil {
+			t.Fatalf("closing db: %v", err)
+		}
+
+		if err := dbM.Close(); err != nil {
+			t.Fatalf("closing db manager: %v", err)
+		}
 
 		t.Logf("******************** LOGS (%s) ********************\n\n", testName)
 		t.Log(buf.String())
@@ -120,4 +128,15 @@ func New(t *testing.T, testName string) *Database {
 		Log:       log,
 		BusDomain: newBusDomains(log, db),
 	}
+}
+
+func randomInt(maxValue int) int {
+	if maxValue <= 0 {
+		return 0
+	}
+	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(maxValue)))
+	if err != nil {
+		panic(err)
+	}
+	return int(n.Int64())
 }

@@ -12,17 +12,17 @@ import (
 )
 
 type productDB struct {
-	ID          uuid.UUID `db:"product_id"`
-	UserID      uuid.UUID `db:"user_id"`
-	Name        string    `db:"name"`
-	Cost        float64   `db:"cost"`
-	Quantity    int       `db:"quantity"`
 	DateCreated time.Time `db:"date_created"`
 	DateUpdated time.Time `db:"date_updated"`
+	Name        string    `db:"name"`
 	UserName    string    `db:"user_name"`
+	Cost        float64   `db:"cost"`
+	Quantity    int       `db:"quantity"`
+	ID          uuid.UUID `db:"product_id"`
+	UserID      uuid.UUID `db:"user_id"`
 }
 
-func toBusProduct(db productDB) (vproductbus.Product, error) {
+func toBusProduct(db *productDB) (vproductbus.Product, error) {
 	userName, err := name.Parse(db.UserName)
 	if err != nil {
 		return vproductbus.Product{}, fmt.Errorf("parse user name: %w", err)
@@ -60,9 +60,9 @@ func toBusProduct(db productDB) (vproductbus.Product, error) {
 func toBusProducts(dbPrds []productDB) ([]vproductbus.Product, error) {
 	bus := make([]vproductbus.Product, len(dbPrds))
 
-	for i, dbPrd := range dbPrds {
+	for i := range dbPrds {
 		var err error
-		bus[i], err = toBusProduct(dbPrd)
+		bus[i], err = toBusProduct(&dbPrds[i])
 		if err != nil {
 			return nil, err
 		}

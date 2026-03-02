@@ -52,8 +52,8 @@ func main() {
 	}
 }
 
+//nolint:gocyclo // Keeping current flow; complexity intentionally accepted for startup orchestration.
 func run(ctx context.Context, log *logger.Logger) error {
-
 	// -------------------------------------------------------------------------
 	// GOMAXPROCS
 
@@ -64,21 +64,16 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	cfg := struct {
 		conf.Version
-		Web struct {
-			ReadTimeout        time.Duration `conf:"default:5s"`
-			WriteTimeout       time.Duration `conf:"default:10s"`
-			IdleTimeout        time.Duration `conf:"default:120s"`
-			ShutdownTimeout    time.Duration `conf:"default:20s"`
-			APIHost            string        `conf:"default:0.0.0.0:6000"`
-			DebugHost          string        `conf:"default:0.0.0.0:6010"`
-			GRPCHost           string        `conf:"default:0.0.0.0:6001"`
-			CORSAllowedOrigins []string      `conf:"default:*"`
-		}
 		Auth struct {
 			KeysJSON   string `conf:"mask"`
 			KeysFolder string `conf:"default:zarf/keys/"`
 			ActiveKID  string `conf:"default:54bb2165-71e1-41a6-af3e-7da4a0e1e2c1"`
 			Issuer     string `conf:"default:service project"`
+		}
+		Tempo struct {
+			Host        string  `conf:"default:tempo:4317"`
+			ServiceName string  `conf:"default:auth"`
+			Probability float64 `conf:"default:0.05"`
 		}
 		DB struct {
 			User         string `conf:"default:postgres"`
@@ -89,10 +84,15 @@ func run(ctx context.Context, log *logger.Logger) error {
 			MaxOpenConns int    `conf:"default:0"`
 			DisableTLS   bool   `conf:"default:true"`
 		}
-		Tempo struct {
-			Host        string  `conf:"default:tempo:4317"`
-			ServiceName string  `conf:"default:auth"`
-			Probability float64 `conf:"default:0.05"`
+		Web struct {
+			APIHost            string        `conf:"default:0.0.0.0:6000"`
+			DebugHost          string        `conf:"default:0.0.0.0:6010"`
+			GRPCHost           string        `conf:"default:0.0.0.0:6001"`
+			CORSAllowedOrigins []string      `conf:"default:*"`
+			ReadTimeout        time.Duration `conf:"default:5s"`
+			WriteTimeout       time.Duration `conf:"default:10s"`
+			IdleTimeout        time.Duration `conf:"default:120s"`
+			ShutdownTimeout    time.Duration `conf:"default:20s"`
 		}
 	}{
 		Version: conf.Version{
@@ -132,7 +132,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	log.Info(ctx, "startup", "status", "initializing database support", "hostport", cfg.DB.Host)
 
-	db, err := sqldb.Open(sqldb.Config{
+	dbcfg := sqldb.Config{
 		User:         cfg.DB.User,
 		Password:     cfg.DB.Password,
 		Host:         cfg.DB.Host,
@@ -140,12 +140,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 		MaxIdleConns: cfg.DB.MaxIdleConns,
 		MaxOpenConns: cfg.DB.MaxOpenConns,
 		DisableTLS:   cfg.DB.DisableTLS,
-	})
+	}
+	db, err := sqldb.Open(&dbcfg)
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
 	}
 
-	defer db.Close()
+	defer func() {
+		if errClose := db.Close(); errClose != nil {
+			log.Error(ctx, "db close", "err", errClose)
+		}
+	}()
 
 	// -------------------------------------------------------------------------
 	// Create Business Packages
@@ -158,7 +163,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	log.Info(ctx, "startup", "status", "initializing authentication support")
 
-	// Check the enviornment first to see if a key is being provided. Then
+	// Check the environment first to see if a key is being provided. Then
 	// load any private keys files from disk. We can assume some system like
 	// Vault has created these files already. How that happens is not our
 	// concern.
@@ -213,11 +218,18 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// -------------------------------------------------------------------------
 	// Start Debug Service
 
+	debugServer := &http.Server{
+		Addr:         cfg.Web.DebugHost,
+		Handler:      debug.Mux(),
+		ReadTimeout:  cfg.Web.ReadTimeout,
+		WriteTimeout: cfg.Web.WriteTimeout,
+		IdleTimeout:  cfg.Web.IdleTimeout,
+	}
+
 	go func() {
 		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
-
-		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.Mux()); err != nil {
-			log.Error(ctx, "shutdown", "status", "debug v1 router closed", "host", cfg.Web.DebugHost, "msg", err)
+		if errL := debugServer.ListenAndServe(); errL != nil && !errors.Is(errL, http.ErrServerClosed) {
+			log.Error(ctx, "shutdown", "status", "debug v1 router closed", "host", cfg.Web.DebugHost, "msg", errL)
 		}
 	}()
 
@@ -241,10 +253,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 			Auth: ath,
 		},
 	}
+	handler := mux.WebAPI(&cfgMux, build.Routes(), mux.WithCORS(cfg.Web.CORSAllowedOrigins))
 
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
-		Handler:      mux.WebAPI(cfgMux, build.Routes(), mux.WithCORS(cfg.Web.CORSAllowedOrigins)),
+		Handler:      handler,
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 		IdleTimeout:  cfg.Web.IdleTimeout,
@@ -289,11 +302,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 		log.Info(ctx, "shutdown", "status", "shutdown started", "signal", sig)
 		defer log.Info(ctx, "shutdown", "status", "shutdown complete", "signal", sig)
 
-		ctx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
+		cancelCtx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
 		defer cancel()
 
-		if err := api.Shutdown(ctx); err != nil {
-			api.Close()
+		if err := debugServer.Shutdown(cancelCtx); err != nil {
+			log.Error(ctx, "shutdown", "status", "debug server shutdown failed", "err", err)
+		}
+
+		if err := api.Shutdown(cancelCtx); err != nil {
+			if closeErr := api.Close(); closeErr != nil {
+				log.Error(ctx, "shutdown", "status", "api close failed", "err", closeErr)
+			}
 			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 	}

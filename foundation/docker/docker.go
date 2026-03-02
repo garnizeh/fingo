@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -20,11 +21,14 @@ type Container struct {
 }
 
 // StartContainer starts the specified container for running tests.
-func StartContainer(image string, name string, port string, dockerArgs []string, appArgs []string) (Container, error) {
-
+func StartContainer(image, name, port string, dockerArgs, appArgs []string) (Container, error) {
 	// When this code is used in tests, each test could be running in it's own
 	// process, so there is no way to serialize the call. The idea is to wait
 	// for the container to exist if the code fails to start it.
+
+	if err := validateContainerInputs(name, port); err != nil {
+		return Container{}, err
+	}
 
 	// Check if the container is already running.
 	if c, err := exists(name, port); err == nil {
@@ -76,23 +80,40 @@ func DumpContainerLogs(id string) []byte {
 
 // =============================================================================
 
-func dockerRun(image string, name string, port string, dockerArgs []string, appArgs []string) (Container, error) {
-	arg := []string{"run", "-P", "-d", "--name", name}
-	arg = append(arg, dockerArgs...)
-	arg = append(arg, image)
-	arg = append(arg, appArgs...)
-
-	var out bytes.Buffer
-	cmd := exec.Command("docker", arg...)
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return Container{}, fmt.Errorf("could not start container %s: %w", image, err)
+func dockerRun(image, name, port string, dockerArgs, appArgs []string) (Container, error) {
+	if err := validateContainerInputs(name, port); err != nil {
+		return Container{}, err
 	}
 
-	id := out.String()[:12]
+	safeDockerArgs, err := sanitizeArgs(dockerArgs)
+	if err != nil {
+		return Container{}, fmt.Errorf("invalid docker args: %w", err)
+	}
+
+	safeAppArgs, err := sanitizeArgs(appArgs)
+	if err != nil {
+		return Container{}, fmt.Errorf("invalid application args: %w", err)
+	}
+
+	arg := []string{"run", "-P", "-d", "--name", name}
+	arg = append(arg, safeDockerArgs...)
+	arg = append(arg, image)
+	arg = append(arg, safeAppArgs...)
+
+	var buf bytes.Buffer
+	// #nosec G204 - arg is populated with validated/sanitized input.
+	cmd := exec.Command("docker", arg...)
+	cmd.Stdout = &buf
+	if errRun := cmd.Run(); errRun != nil {
+		return Container{}, fmt.Errorf("could not start container %s: %w", image, errRun)
+	}
+
+	id := buf.String()[:12]
 	hostIP, hostPort, err := extractIPPort(id, port)
 	if err != nil {
-		StopContainer(id)
+		if serr := StopContainer(id); serr != nil {
+			err = errors.Join(err, fmt.Errorf("cleanup failed: %v", serr))
+		}
 		return Container{}, fmt.Errorf("could not extract ip/port: %w", err)
 	}
 
@@ -104,7 +125,10 @@ func dockerRun(image string, name string, port string, dockerArgs []string, appA
 	return c, nil
 }
 
-func exists(name string, port string) (Container, error) {
+func exists(name, port string) (Container, error) {
+	if err := validateContainerInputs(name, port); err != nil {
+		return Container{}, err
+	}
 	hostIP, hostPort, err := extractIPPort(name, port)
 	if err != nil {
 		return Container{}, errors.New("container not running")
@@ -118,10 +142,14 @@ func exists(name string, port string) (Container, error) {
 	return c, nil
 }
 
-func extractIPPort(name string, port string) (hostIP string, hostPort string, err error) {
+func extractIPPort(name, port string) (hostIP, hostPort string, err error) {
+	if err := validateContainerInputs(name, port); err != nil {
+		return "", "", err
+	}
 	tmpl := fmt.Sprintf("[{{range $k,$v := (index .NetworkSettings.Ports \"%s/tcp\")}}{{json $v}}{{end}}]", port)
 
 	var out bytes.Buffer
+	// #nosec G204 - arg is populated with validated/sanitized input.
 	cmd := exec.Command("docker", "inspect", "-f", tmpl, name)
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -154,4 +182,55 @@ func extractIPPort(name string, port string) (hostIP string, hostPort string, er
 	}
 
 	return "", "", fmt.Errorf("could not locate ip/port")
+}
+
+var (
+	validDockerArg     = regexp.MustCompile(`^[a-zA-Z0-9_\-./:=]+$`)
+	validContainerName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$`)
+	validPort          = regexp.MustCompile(`^\d{1,5}$`)
+)
+
+func validateContainerInputs(name, port string) error {
+	if err := validateContainerName(name); err != nil {
+		return err
+	}
+
+	return validatePort(port)
+}
+
+func validateContainerName(name string) error {
+	if name == "" || !validContainerName.MatchString(name) {
+		return fmt.Errorf("invalid container name %q", name)
+	}
+
+	return nil
+}
+
+func validatePort(port string) error {
+	if port == "" || !validPort.MatchString(port) {
+		return fmt.Errorf("invalid port %q", port)
+	}
+
+	return nil
+}
+
+func sanitizeArgs(args []string) ([]string, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+
+	sanitized := make([]string, 0, len(args))
+	for i, arg := range args {
+		if arg == "" {
+			return nil, fmt.Errorf("docker argument %d is empty", i)
+		}
+
+		if !validDockerArg.MatchString(arg) {
+			return nil, fmt.Errorf("docker argument %q is not allowed", arg)
+		}
+
+		sanitized = append(sanitized, arg)
+	}
+
+	return sanitized, nil
 }

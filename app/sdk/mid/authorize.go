@@ -37,7 +37,7 @@ func Authorize(client authclient.Authenticator, rule string) web.MidFunc {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err := client.Authorize(ctx, auth); err != nil {
+			if err := client.Authorize(ctx, &auth); err != nil {
 				return errs.New(errs.Unauthenticated, err)
 			}
 
@@ -78,19 +78,19 @@ func AuthorizeUser(client authclient.Authenticator, userBus userbus.ExtBusiness,
 					}
 				}
 
-				ctx = setUser(ctx, usr)
+				ctx = setUser(ctx, &usr)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			auth := authclient.Authorize{
+			authz := authclient.Authorize{
 				Claims: GetClaims(ctx),
 				UserID: userID,
 				Rule:   rule,
 			}
 
-			if err := client.Authorize(ctx, auth); err != nil {
+			if err := client.Authorize(ctx, &authz); err != nil {
 				return errs.New(errs.Unauthenticated, err)
 			}
 
@@ -132,7 +132,7 @@ func AuthorizeProduct(client authclient.Authenticator, productBus productbus.Ext
 				}
 
 				userID = prd.UserID
-				ctx = setProduct(ctx, prd)
+				ctx = setProduct(ctx, &prd)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -144,7 +144,7 @@ func AuthorizeProduct(client authclient.Authenticator, productBus productbus.Ext
 				Rule:   auth.RuleAdminOrSubject,
 			}
 
-			if err := client.Authorize(ctx, auth); err != nil {
+			if err := client.Authorize(ctx, &auth); err != nil {
 				return errs.New(errs.Unauthenticated, err)
 			}
 
@@ -186,7 +186,7 @@ func AuthorizeHome(client authclient.Authenticator, homeBus homebus.ExtBusiness)
 				}
 
 				userID = hme.UserID
-				ctx = setHome(ctx, hme)
+				ctx = setHome(ctx, &hme)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -198,7 +198,7 @@ func AuthorizeHome(client authclient.Authenticator, homeBus homebus.ExtBusiness)
 				Rule:   auth.RuleAdminOrSubject,
 			}
 
-			if err := client.Authorize(ctx, auth); err != nil {
+			if err := client.Authorize(ctx, &auth); err != nil {
 				return errs.New(errs.Unauthenticated, err)
 			}
 

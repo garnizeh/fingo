@@ -77,7 +77,7 @@ func (a *Auth) Issuer() string {
 }
 
 // GenerateToken generates a signed JWT token string representing the user Claims.
-func (a *Auth) GenerateToken(kid string, claims Claims) (string, error) {
+func (a *Auth) GenerateToken(kid string, claims *Claims) (string, error) {
 	token := jwt.NewWithClaims(a.method, claims)
 	token.Header["kid"] = kid
 
@@ -141,7 +141,7 @@ func (a *Auth) Authenticate(ctx context.Context, bearerToken string) (Claims, er
 
 	// Check the database for this user to verify they are still enabled.
 
-	if err := a.isUserEnabled(ctx, claims); err != nil {
+	if err := a.isUserEnabled(ctx, &claims); err != nil {
 		return Claims{}, fmt.Errorf("user not enabled: %w", err)
 	}
 
@@ -151,7 +151,7 @@ func (a *Auth) Authenticate(ctx context.Context, bearerToken string) (Claims, er
 // Authorize attempts to authorize the user with the provided input roles, if
 // none of the input roles are within the user's claims, we return an error
 // otherwise the user is authorized.
-func (a *Auth) Authorize(ctx context.Context, claims Claims, userID uuid.UUID, rule string) error {
+func (a *Auth) Authorize(ctx context.Context, claims *Claims, userID uuid.UUID, rule string) error {
 	input := map[string]any{
 		"Roles":   claims.Roles,
 		"Subject": claims.Subject,
@@ -167,7 +167,7 @@ func (a *Auth) Authorize(ctx context.Context, claims Claims, userID uuid.UUID, r
 
 // opaPolicyEvaluation asks opa to evaluate the token against the specified token
 // policy and public key.
-func (a *Auth) opaPolicyEvaluation(ctx context.Context, regoScript string, rule string, input any, baseError error) error {
+func (a *Auth) opaPolicyEvaluation(ctx context.Context, regoScript, rule string, input any, baseError error) error {
 	query := fmt.Sprintf("x = data.%s.%s", opaPackage, rule)
 
 	q, err := rego.New(
@@ -198,7 +198,7 @@ func (a *Auth) opaPolicyEvaluation(ctx context.Context, regoScript string, rule 
 
 // isUserEnabled hits the database and checks the user is not disabled. If the
 // no database connection was provided, this check is skipped.
-func (a *Auth) isUserEnabled(ctx context.Context, claims Claims) error {
+func (a *Auth) isUserEnabled(ctx context.Context, claims *Claims) error {
 	if a.userBus == nil {
 		return nil
 	}

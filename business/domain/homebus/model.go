@@ -19,19 +19,19 @@ type Address struct {
 
 // Home represents an individual home.
 type Home struct {
-	ID          uuid.UUID
-	UserID      uuid.UUID
-	Type        home.Home
-	Address     Address
 	DateCreated time.Time
 	DateUpdated time.Time
+	Address     *Address
+	Type        home.Home
+	ID          uuid.UUID
+	UserID      uuid.UUID
 }
 
 // NewHome is what we require from clients when adding a Home.
 type NewHome struct {
-	UserID  uuid.UUID
+	Address *Address
 	Type    home.Home
-	Address Address
+	UserID  uuid.UUID
 }
 
 // UpdateAddress is what fields can be updated in the store.

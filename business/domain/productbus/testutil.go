@@ -2,8 +2,9 @@ package productbus
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 
 	"github.com/garnizeh/fingo/business/types/money"
 	"github.com/garnizeh/fingo/business/types/name"
@@ -15,14 +16,14 @@ import (
 func TestGenerateNewProducts(n int, userID uuid.UUID) []NewProduct {
 	newPrds := make([]NewProduct, n)
 
-	idx := rand.Intn(10000)
+	idx := randomInt(10000)
 	for i := range n {
 		idx++
 
 		np := NewProduct{
 			Name:     name.MustParse(fmt.Sprintf("Name%d", idx)),
-			Cost:     money.MustParse(float64(rand.Intn(500) + 1)),
-			Quantity: quantity.MustParse(rand.Intn(50) + 1),
+			Cost:     money.MustParse(float64(randomInt(500) + 1)),
+			Quantity: quantity.MustParse(randomInt(50) + 1),
 			UserID:   userID,
 		}
 
@@ -32,13 +33,24 @@ func TestGenerateNewProducts(n int, userID uuid.UUID) []NewProduct {
 	return newPrds
 }
 
+func randomInt(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	res, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(n)))
+	if err != nil {
+		panic(err)
+	}
+	return int(res.Int64())
+}
+
 // TestGenerateSeedProducts is a helper method for testing.
 func TestGenerateSeedProducts(ctx context.Context, n int, api ExtBusiness, userID uuid.UUID) ([]Product, error) {
 	newPrds := TestGenerateNewProducts(n, userID)
 
 	prds := make([]Product, len(newPrds))
-	for i, np := range newPrds {
-		prd, err := api.Create(ctx, np)
+	for i := range newPrds {
+		prd, err := api.Create(ctx, &newPrds[i])
 		if err != nil {
 			return nil, fmt.Errorf("seeding product: idx: %d : %w", i, err)
 		}

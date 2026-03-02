@@ -9,14 +9,13 @@ import (
 
 // BuildInfo logs information stored inside the Go binary.
 func (log *Logger) BuildInfo(ctx context.Context) {
-	var values []any
-
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		log.Warn(ctx, "build info not available")
 		return
 	}
 
+	values := make([]any, 0, len(info.Settings)*2)
 	for _, s := range info.Settings {
 		key := s.Key
 		if quoteKey(key) {
@@ -31,15 +30,14 @@ func (log *Logger) BuildInfo(ctx context.Context) {
 		values = append(values, key, value)
 	}
 
-	values = append(values, "goversion", info.GoVersion)
-	values = append(values, "modversion", info.Main.Version)
+	values = append(values, "goversion", info.GoVersion, "modversion", info.Main.Version)
 
 	log.Info(ctx, "build info", values...)
 }
 
 // quoteKey reports whether key is required to be quoted.
 func quoteKey(key string) bool {
-	return len(key) == 0 || strings.ContainsAny(key, "= \t\r\n\"`")
+	return key == "" || strings.ContainsAny(key, "= \t\r\n\"`")
 }
 
 // quoteValue reports whether value is required to be quoted.

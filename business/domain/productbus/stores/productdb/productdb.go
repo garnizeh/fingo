@@ -48,7 +48,7 @@ func (s *Store) NewWithTx(tx sqldb.CommitRollbacker) (productbus.Storer, error) 
 
 // Create adds a Product to the sqldb. It returns the created Product with
 // fields like ID and DateCreated populated.
-func (s *Store) Create(ctx context.Context, prd productbus.Product) error {
+func (s *Store) Create(ctx context.Context, prd *productbus.Product) error {
 	const q = `
 	INSERT INTO products
 		(product_id, user_id, name, cost, quantity, date_created, date_updated)
@@ -64,7 +64,7 @@ func (s *Store) Create(ctx context.Context, prd productbus.Product) error {
 
 // Update modifies data about a productbus. It will error if the specified ID is
 // invalid or does not reference an existing productbus.
-func (s *Store) Update(ctx context.Context, prd productbus.Product) error {
+func (s *Store) Update(ctx context.Context, prd *productbus.Product) error {
 	const q = `
 	UPDATE
 		products
@@ -84,7 +84,7 @@ func (s *Store) Update(ctx context.Context, prd productbus.Product) error {
 }
 
 // Delete removes the product identified by a given ID.
-func (s *Store) Delete(ctx context.Context, prd productbus.Product) error {
+func (s *Store) Delete(ctx context.Context, prd *productbus.Product) error {
 	data := struct {
 		ID string `db:"product_id"`
 	}{
@@ -185,7 +185,7 @@ func (s *Store) QueryByID(ctx context.Context, productID uuid.UUID) (productbus.
 		return productbus.Product{}, fmt.Errorf("db: %w", err)
 	}
 
-	return toBusProduct(dbPrd)
+	return toBusProduct(&dbPrd)
 }
 
 // QueryByUserID finds the product identified by a given User ID.

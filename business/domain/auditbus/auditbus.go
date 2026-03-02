@@ -16,15 +16,15 @@ import (
 // Storer interface declares the behavior this package needs to persist and
 // retrieve data.
 type Storer interface {
-	Create(ctx context.Context, audit Audit) error
+	Create(ctx context.Context, audit *Audit) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Audit, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 }
 
 // ExtBusiness interface provides support for extensions that wrap extra functionality
-// around the core busines logic.
+// around the core business logic.
 type ExtBusiness interface {
-	Create(ctx context.Context, na NewAudit) (Audit, error)
+	Create(ctx context.Context, na *NewAudit) (Audit, error)
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Audit, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 }
@@ -57,7 +57,7 @@ func NewBusiness(log *logger.Logger, storer Storer, extensions ...Extension) Ext
 }
 
 // Create adds a new audit record to the system.
-func (b *Business) Create(ctx context.Context, na NewAudit) (Audit, error) {
+func (b *Business) Create(ctx context.Context, na *NewAudit) (Audit, error) {
 	jsonData, err := json.Marshal(na.Data)
 	if err != nil {
 		return Audit{}, fmt.Errorf("marshal object: %w", err)
@@ -75,7 +75,7 @@ func (b *Business) Create(ctx context.Context, na NewAudit) (Audit, error) {
 		Timestamp: time.Now(),
 	}
 
-	if err := b.storer.Create(ctx, audit); err != nil {
+	if err := b.storer.Create(ctx, &audit); err != nil {
 		return Audit{}, fmt.Errorf("create audit: %w", err)
 	}
 

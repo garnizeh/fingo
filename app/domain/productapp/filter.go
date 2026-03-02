@@ -36,7 +36,7 @@ func parseQueryParams(r *http.Request) queryParams {
 	return filter
 }
 
-func parseFilter(qp queryParams) (productbus.QueryFilter, error) {
+func (qp *queryParams) parseFilter() (productbus.QueryFilter, error) {
 	var fieldErrors errs.FieldErrors
 	var filter productbus.QueryFilter
 

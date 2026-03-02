@@ -1,3 +1,4 @@
+// Package creditcardapp maintains the app layer api for the credit card domain.
 package creditcardapp
 
 import (

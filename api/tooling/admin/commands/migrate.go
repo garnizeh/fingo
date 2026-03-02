@@ -14,12 +14,16 @@ import (
 var ErrHelp = errors.New("provided help")
 
 // Migrate creates the schema in the database.
-func Migrate(cfg sqldb.Config) error {
+func Migrate(cfg *sqldb.Config) (err error) {
 	db, err := sqldb.Open(cfg)
 	if err != nil {
 		return fmt.Errorf("connect database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing database: %w", cerr))
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

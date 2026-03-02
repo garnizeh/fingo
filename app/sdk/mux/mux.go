@@ -3,6 +3,7 @@
 package mux
 
 import (
+	"context"
 	"embed"
 	"net/http"
 
@@ -23,10 +24,10 @@ import (
 
 // StaticSite represents a static site to run.
 type StaticSite struct {
-	react      bool
 	static     embed.FS
 	staticDir  string
 	staticPath string
+	react      bool
 }
 
 // Options represent optional parameters.
@@ -43,7 +44,7 @@ func WithCORS(origins []string) func(opts *Options) {
 }
 
 // WithFileServer provides configuration options for file server.
-func WithFileServer(react bool, static embed.FS, dir string, path string) func(opts *Options) {
+func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Options) {
 	return func(opts *Options) {
 		opts.sites = append(opts.sites, StaticSite{
 			react:      react,
@@ -75,23 +76,23 @@ type BusConfig struct {
 
 // Config contains all the mandatory systems required by handlers.
 type Config struct {
-	Build       string
+	BusConfig   BusConfig
+	Tracer      trace.Tracer
+	FinGoConfig FinGoConfig
 	Log         *logger.Logger
 	DB          *sqlx.DB
-	Tracer      trace.Tracer
-	BusConfig   BusConfig
-	FinGoConfig FinGoConfig
 	AuthConfig  AuthConfig
+	Build       string
 }
 
 // RouteAdder defines behavior that sets the routes to bind for an instance
 // of the service.
 type RouteAdder interface {
-	Add(app *web.App, cfg Config)
+	Add(app *web.App, cfg *Config)
 }
 
 // WebAPI constructs a http.Handler with all application routes bound.
-func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) http.Handler {
+func WebAPI(cfg *Config, routeAdder RouteAdder, options ...func(opts *Options)) http.Handler {
 	app := web.NewApp(
 		cfg.Log.Info,
 		cfg.Tracer,
@@ -116,12 +117,23 @@ func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) h
 	for _, site := range opts.sites {
 		switch site.react {
 		case true:
-			app.FileServerReact(site.static, site.staticDir, site.staticPath)
+			if err := app.FileServerReact(site.static, site.staticDir, site.staticPath); err != nil {
+				logFileServerError(cfg, err)
+			}
 
 		default:
-			app.FileServer(site.static, site.staticDir, site.staticPath)
+			if err := app.FileServer(site.static, site.staticDir, site.staticPath); err != nil {
+				logFileServerError(cfg, err)
+			}
 		}
 	}
 
 	return app
+}
+
+func logFileServerError(cfg *Config, err error) {
+	if err == nil || cfg == nil || cfg.Log == nil {
+		return
+	}
+	cfg.Log.Error(context.Background(), "fileserver", "err", err)
 }

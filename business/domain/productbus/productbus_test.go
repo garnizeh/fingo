@@ -24,22 +24,22 @@ func Test_Product(t *testing.T) {
 
 	db := dbtest.New(t, "Test_Product")
 
-	sd, err := insertSeedData(db.BusDomain)
+	sd, err := insertSeedData(&db.BusDomain)
 	if err != nil {
 		t.Fatalf("Seeding error: %s", err)
 	}
 
 	// -------------------------------------------------------------------------
 
-	unittest.Run(t, query(db.BusDomain, sd), "query")
-	unittest.Run(t, create(db.BusDomain, sd), "create")
-	unittest.Run(t, update(db.BusDomain, sd), "update")
-	unittest.Run(t, delete(db.BusDomain, sd), "delete")
+	unittest.Run(t, query(&db.BusDomain, sd), "query")
+	unittest.Run(t, create(&db.BusDomain, sd), "create")
+	unittest.Run(t, update(&db.BusDomain, sd), "update")
+	unittest.Run(t, deleteRows(&db.BusDomain, sd), "delete")
 }
 
 // =============================================================================
 
-func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
+func insertSeedData(busDomain *dbtest.BusDomain) (unittest.SeedData, error) {
 	ctx := context.Background()
 
 	usrs, err := userbus.TestSeedUsers(ctx, 1, role.User, busDomain.User)
@@ -86,7 +86,7 @@ func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
 
 // =============================================================================
 
-func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func query(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	prds := make([]productbus.Product, 0, len(sd.Admins[0].Products)+len(sd.Users[0].Products))
 	prds = append(prds, sd.Admins[0].Products...)
 	prds = append(prds, sd.Users[0].Products...)
@@ -167,7 +167,7 @@ func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func create(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name: "basic",
@@ -185,7 +185,7 @@ func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 					Quantity: quantity.MustParse(10),
 				}
 
-				resp, err := busDomain.Product.Create(ctx, np)
+				resp, err := busDomain.Product.Create(ctx, &np)
 				if err != nil {
 					return err
 				}
@@ -212,7 +212,7 @@ func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func update(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name: "basic",
@@ -232,7 +232,7 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 					Quantity: dbtest.QuantityPointer(10),
 				}
 
-				resp, err := busDomain.Product.Update(ctx, sd.Users[0].Products[0], up)
+				resp, err := busDomain.Product.Update(ctx, &sd.Users[0].Products[0], up)
 				if err != nil {
 					return err
 				}
@@ -257,13 +257,13 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func delete(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func deleteRows(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name:    "user",
 			ExpResp: nil,
 			ExcFunc: func(ctx context.Context) any {
-				if err := busDomain.Product.Delete(ctx, sd.Users[0].Products[1]); err != nil {
+				if err := busDomain.Product.Delete(ctx, &sd.Users[0].Products[1]); err != nil {
 					return err
 				}
 
@@ -277,7 +277,7 @@ func delete(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 			Name:    "admin",
 			ExpResp: nil,
 			ExcFunc: func(ctx context.Context) any {
-				if err := busDomain.Product.Delete(ctx, sd.Admins[0].Products[1]); err != nil {
+				if err := busDomain.Product.Delete(ctx, &sd.Admins[0].Products[1]); err != nil {
 					return err
 				}
 

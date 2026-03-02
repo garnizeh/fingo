@@ -85,7 +85,7 @@ func queryByID200(sd apitest.SeedData) []apitest.Table {
 			StatusCode: http.StatusOK,
 			Method:     http.MethodGet,
 			GotResp:    &homeapp.Home{},
-			ExpResp:    toAppHomePtr(sd.Users[0].Homes[0]),
+			ExpResp:    toAppHomePtr(&sd.Users[0].Homes[0]),
 			CmpFunc: func(got any, exp any) string {
 				return cmp.Diff(got, exp)
 			},

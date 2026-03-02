@@ -33,7 +33,7 @@ func (ext *Extension) NewWithTx(tx sqldb.CommitRollbacker) (productbus.ExtBusine
 }
 
 // Create applies otel to the product creation process.
-func (ext *Extension) Create(ctx context.Context, np productbus.NewProduct) (productbus.Product, error) {
+func (ext *Extension) Create(ctx context.Context, np *productbus.NewProduct) (productbus.Product, error) {
 	ctx, span := otel.AddSpan(ctx, "business.productbus.create")
 	defer span.End()
 
@@ -46,7 +46,7 @@ func (ext *Extension) Create(ctx context.Context, np productbus.NewProduct) (pro
 }
 
 // Update applies otel to the product update process.
-func (ext *Extension) Update(ctx context.Context, prd productbus.Product, up productbus.UpdateProduct) (productbus.Product, error) {
+func (ext *Extension) Update(ctx context.Context, prd *productbus.Product, up productbus.UpdateProduct) (productbus.Product, error) {
 	ctx, span := otel.AddSpan(ctx, "business.productbus.update")
 	defer span.End()
 
@@ -59,7 +59,7 @@ func (ext *Extension) Update(ctx context.Context, prd productbus.Product, up pro
 }
 
 // Delete applies otel to the product deletion process.
-func (ext *Extension) Delete(ctx context.Context, prd productbus.Product) error {
+func (ext *Extension) Delete(ctx context.Context, prd *productbus.Product) error {
 	ctx, span := otel.AddSpan(ctx, "business.productbus.delete")
 	defer span.End()
 

@@ -22,12 +22,14 @@ func TestCreate(t *testing.T) {
 	ctx, api, userAID, _ := newTestBus(t)
 
 	ncc := creditcardbus.NewCreditCard{
-		UserID:         userAID,
-		Name:           name.MustParse("Primary Card"),
-		Limit:          money.MustParse(1200),
-		ClosingDay:     10,
-		DueDay:         20,
-		LastFourDigits: "1234",
+		CreditCardIdentity: creditcardbus.CreditCardIdentity{
+			Name:           name.MustParse("Primary Card"),
+			LastFourDigits: "1234",
+		},
+		UserID:     userAID,
+		Limit:      money.MustParse(1200),
+		ClosingDay: 10,
+		DueDay:     20,
 	}
 
 	cc, err := api.Create(ctx, userAID, ncc)
@@ -52,12 +54,14 @@ func TestCreate(t *testing.T) {
 	}
 
 	invalid := creditcardbus.NewCreditCard{
-		UserID:         userAID,
-		Name:           name.MustParse("Invalid Limit Card"),
-		Limit:          money.Money{},
-		ClosingDay:     10,
-		DueDay:         20,
-		LastFourDigits: "9999",
+		CreditCardIdentity: creditcardbus.CreditCardIdentity{
+			Name:           name.MustParse("Invalid Limit Card"),
+			LastFourDigits: "9999",
+		},
+		UserID:     userAID,
+		Limit:      money.Money{},
+		ClosingDay: 10,
+		DueDay:     20,
 	}
 
 	_, err = api.Create(ctx, userAID, invalid)
@@ -78,7 +82,7 @@ func TestUpdate(t *testing.T) {
 		Limit: dbtest.MoneyPointer(1500),
 	}
 
-	updated, err := api.Update(ctx, userAID, created, ucc)
+	updated, err := api.Update(ctx, userAID, &created, ucc)
 	if err != nil {
 		t.Fatalf("update card: %v", err)
 	}
@@ -101,7 +105,7 @@ func TestDelete(t *testing.T) {
 
 	created := mustCreateCard(t, ctx, api, userAID, "Delete Card", 900, "2222")
 
-	if err := api.Delete(ctx, userAID, created); err != nil {
+	if err := api.Delete(ctx, userAID, &created); err != nil {
 		t.Fatalf("delete card: %v", err)
 	}
 
@@ -178,7 +182,7 @@ func TestQueryByID(t *testing.T) {
 	}
 }
 
-func newTestBus(t *testing.T) (context.Context, creditcardbus.ExtBusiness, uuid.UUID, uuid.UUID) {
+func newTestBus(t *testing.T) (ctx context.Context, api creditcardbus.ExtBusiness, userAID, userBID uuid.UUID) {
 	t.Helper()
 
 	if os.Getenv("TEST_DB_URL") == "" {
@@ -186,14 +190,14 @@ func newTestBus(t *testing.T) (context.Context, creditcardbus.ExtBusiness, uuid.
 	}
 
 	db := dbtest.New(t, t.Name())
-	ctx := context.Background()
+	ctx = context.Background()
 
 	users, err := userbus.TestSeedUsers(ctx, 2, role.User, db.BusDomain.User)
 	if err != nil {
 		t.Fatalf("seeding users: %v", err)
 	}
 
-	api := db.BusDomain.CreditCard
+	api = db.BusDomain.CreditCard
 
 	return ctx, api, users[0].ID, users[1].ID
 }
@@ -201,12 +205,14 @@ func mustCreateCard(t *testing.T, ctx context.Context, api creditcardbus.ExtBusi
 	t.Helper()
 
 	ncc := creditcardbus.NewCreditCard{
-		UserID:         userID,
-		Name:           name.MustParse(cardName),
-		Limit:          money.MustParse(limit),
-		ClosingDay:     10,
-		DueDay:         20,
-		LastFourDigits: lastFour,
+		CreditCardIdentity: creditcardbus.CreditCardIdentity{
+			Name:           name.MustParse(cardName),
+			LastFourDigits: lastFour,
+		},
+		UserID:     userID,
+		Limit:      money.MustParse(limit),
+		ClosingDay: 10,
+		DueDay:     20,
 	}
 
 	cc, err := api.Create(ctx, userID, ncc)

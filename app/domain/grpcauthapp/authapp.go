@@ -59,14 +59,14 @@ func (a *App) Token(ctx context.Context, req *TokenRequest) (*TokenResponse, err
 		Roles: []string{"user"},
 	}
 
-	token, err := a.auth.GenerateToken(kid, claims)
+	token, err := a.auth.GenerateToken(kid, &claims)
 	if err != nil {
 		a.log.Error(ctx, "token", "err", err)
 		return nil, status.Error(codes.Internal, "failed to generate token")
 	}
 
 	trb := TokenResponse_builder{
-		Token: new(token),
+		Token: &token,
 	}
 
 	return trb.Build(), nil
@@ -129,7 +129,7 @@ func (a *App) Authorize(ctx context.Context, req *AuthorizeRequest) (*AuthorizeR
 		return nil, status.Error(codes.InvalidArgument, "invalid user ID")
 	}
 
-	err = a.auth.Authorize(ctx, claims, userID, reqRule)
+	err = a.auth.Authorize(ctx, &claims, userID, reqRule)
 	if err != nil {
 		if errors.Is(err, auth.ErrForbidden) {
 			return nil, status.Error(codes.PermissionDenied, "not authorized")

@@ -16,7 +16,7 @@ func Routes() all {
 type all struct{}
 
 // Add implements the RouterAdder interface.
-func (all) Add(app *web.App, cfg mux.Config) {
+func (all) Add(app *web.App, cfg *mux.Config) {
 	checkapp.Routes(app, checkapp.Config{
 		Build: cfg.Build,
 		Log:   cfg.Log,

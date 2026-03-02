@@ -372,30 +372,32 @@ func (a Float32) Value() (driver.Value, error) {
 // an array or slice of any dimension.
 type Generic struct{ A any }
 
-func (Generic) evaluateDestination(rt reflect.Type) (reflect.Type, func([]byte, reflect.Value) error, string) {
+func (Generic) evaluateDestination(rt reflect.Type) (r reflect.Type, fn func([]byte, reflect.Value) error, delim string) {
 	var assign func([]byte, reflect.Value) error
 	var del = ","
 
 	// TODO calculate the assign function for other types
 	// TODO repeat this section on the element type of arrays or slices (multidimensional)
-	{
-		if reflect.PointerTo(rt).Implements(typeSQLScanner) {
-			// dest is always addressable because it is an element of a slice.
-			assign = func(src []byte, dest reflect.Value) (err error) {
-				ss := dest.Addr().Interface().(sql.Scanner)
-				if src == nil {
-					err = ss.Scan(nil)
-				} else {
-					err = ss.Scan(src)
-				}
-				return
-			}
-			goto FoundType
-		}
 
-		assign = func([]byte, reflect.Value) error {
-			return fmt.Errorf("database: scanning to %s is not implemented; only sql.Scanner", rt)
+	if reflect.PointerTo(rt).Implements(typeSQLScanner) {
+		// dest is always addressable because it is an element of a slice.
+		assign = func(src []byte, dest reflect.Value) (err error) {
+			ss, ok := dest.Addr().Interface().(sql.Scanner)
+			if ok {
+				if err := ss.Scan(src); err != nil {
+					return err
+				}
+			}
+			if src == nil {
+				return ss.Scan(nil)
+			}
+			return ss.Scan(src)
 		}
+		goto FoundType
+	}
+
+	assign = func([]byte, reflect.Value) error {
+		return fmt.Errorf("database: scanning to %s is not implemented; only sql.Scanner", rt)
 	}
 
 FoundType:
@@ -451,7 +453,7 @@ func (a Generic) scanBytes(src []byte, dv reflect.Value) error {
 
 	if len(dims) > 1 {
 		return fmt.Errorf("database: scanning from multidimensional ARRAY%s is not implemented",
-			strings.Replace(fmt.Sprint(dims), " ", "][", -1))
+			strings.ReplaceAll(fmt.Sprint(dims), " ", "]["))
 	}
 
 	// Treat a zero-dimensional array like an array with a single dimension of zero.
@@ -465,7 +467,7 @@ func (a Generic) scanBytes(src []byte, dv reflect.Value) error {
 		case reflect.Array:
 			if rt.Len() != dims[i] {
 				return fmt.Errorf("database: cannot convert ARRAY%s to %s",
-					strings.Replace(fmt.Sprint(dims), " ", "][", -1), dv.Type())
+					strings.ReplaceAll(fmt.Sprint(dims), " ", "]["), dv.Type())
 			}
 		default:
 			// TODO handle multidimensional
@@ -712,9 +714,8 @@ func (a String) Value() (driver.Value, error) {
 // the delimiter used between elements.
 //
 // It panics when n <= 0 or rv's Kind is not reflect.Array nor reflect.Slice.
-func appendArray(b []byte, rv reflect.Value, n int) ([]byte, string, error) {
+func appendArray(b []byte, rv reflect.Value, n int) (res []byte, typeName string, err error) {
 	var del string
-	var err error
 
 	b = append(b, '{')
 
@@ -740,7 +741,7 @@ func appendArray(b []byte, rv reflect.Value, n int) ([]byte, string, error) {
 // is double-quoted.
 //
 // See http://www.postgresql.org/docs/current/static/arrays.html#ARRAYS-IO
-func appendArrayElement(b []byte, rv reflect.Value) ([]byte, string, error) {
+func appendArrayElement(b []byte, rv reflect.Value) (res []byte, typeName string, err error) {
 	if k := rv.Kind(); k == reflect.Array || k == reflect.Slice {
 		if t := rv.Type(); t != typeByteSlice && !t.Implements(typeDriverValuer) {
 			if n := rv.Len(); n > 0 {
@@ -752,7 +753,6 @@ func appendArrayElement(b []byte, rv reflect.Value) ([]byte, string, error) {
 	}
 
 	var del = ","
-	var err error
 	var iv = rv.Interface()
 
 	if ad, ok := iv.(Delimiter); ok {
@@ -803,6 +803,8 @@ func appendValue(b []byte, v driver.Value) ([]byte, error) {
 // is case-sensitive.
 //
 // See http://www.postgresql.org/docs/current/static/arrays.html#ARRAYS-IO
+//
+//nolint:gocyclo // Parser logic mirrors PostgreSQL array text parsing semantics.
 func parseArray(src, del []byte) (dims []int, elems [][]byte, err error) {
 	var depth, i int
 
@@ -857,31 +859,34 @@ Element:
 			}
 		default:
 			for start := i; i < len(src); i++ {
-				if bytes.HasPrefix(src[i:], del) || src[i] == '}' {
-					elem := src[start:i]
-					if len(elem) == 0 {
-						return nil, nil, fmt.Errorf("database: unable to parse array; unexpected %q at offset %d", src[i], i)
-					}
-					if bytes.Equal(elem, []byte("NULL")) {
-						elem = nil
-					}
-					elems = append(elems, elem)
-					break Element
+				if !bytes.HasPrefix(src[i:], del) && src[i] != '}' {
+					continue
 				}
+
+				elem := src[start:i]
+				if len(elem) == 0 {
+					return nil, nil, fmt.Errorf("database: unable to parse array; unexpected %q at offset %d", src[i], i)
+				}
+				if bytes.Equal(elem, []byte("NULL")) {
+					elem = nil
+				}
+				elems = append(elems, elem)
+				break Element
 			}
 		}
 	}
 
 	for i < len(src) {
-		if bytes.HasPrefix(src[i:], del) && depth > 0 {
+		switch {
+		case bytes.HasPrefix(src[i:], del) && depth > 0:
 			dims[depth-1]++
 			i += len(del)
 			goto Element
-		} else if src[i] == '}' && depth > 0 {
+		case src[i] == '}' && depth > 0:
 			dims[depth-1]++
 			depth--
 			i++
-		} else {
+		default:
 			return nil, nil, fmt.Errorf("database: unable to parse array; unexpected %q at offset %d", src[i], i)
 		}
 	}
@@ -905,7 +910,7 @@ Close:
 			}
 		}
 	}
-	return
+	return dims, elems, err
 }
 
 func scanLinearArray(src, del []byte, typ string) (elems [][]byte, err error) {
@@ -914,7 +919,7 @@ func scanLinearArray(src, del []byte, typ string) (elems [][]byte, err error) {
 		return nil, err
 	}
 	if len(dims) > 1 {
-		return nil, fmt.Errorf("database: cannot convert ARRAY%s to %s", strings.Replace(fmt.Sprint(dims), " ", "][", -1), typ)
+		return nil, fmt.Errorf("database: cannot convert ARRAY%s to %s", strings.ReplaceAll(fmt.Sprint(dims), " ", "]["), typ)
 	}
 	return elems, err
 }

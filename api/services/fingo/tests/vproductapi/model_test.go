@@ -8,7 +8,7 @@ import (
 	"github.com/garnizeh/fingo/business/domain/userbus"
 )
 
-func toAppVProduct(usr userbus.User, prd productbus.Product) vproductapp.Product {
+func toAppVProduct(usr *userbus.User, prd *productbus.Product) vproductapp.Product {
 	return vproductapp.Product{
 		ID:          prd.ID.String(),
 		UserID:      prd.UserID.String(),
@@ -21,10 +21,10 @@ func toAppVProduct(usr userbus.User, prd productbus.Product) vproductapp.Product
 	}
 }
 
-func toAppVProducts(usr userbus.User, prds []productbus.Product) []vproductapp.Product {
+func toAppVProducts(usr *userbus.User, prds []productbus.Product) []vproductapp.Product {
 	items := make([]vproductapp.Product, len(prds))
-	for i, prd := range prds {
-		items[i] = toAppVProduct(usr, prd)
+	for i := range prds {
+		items[i] = toAppVProduct(usr, &prds[i])
 	}
 
 	return items

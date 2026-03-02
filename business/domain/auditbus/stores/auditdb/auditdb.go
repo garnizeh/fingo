@@ -29,7 +29,7 @@ func NewStore(log *logger.Logger, db *sqlx.DB) *Store {
 }
 
 // Create inserts a new audit record into the database.
-func (s *Store) Create(ctx context.Context, a auditbus.Audit) error {
+func (s *Store) Create(ctx context.Context, a *auditbus.Audit) error {
 	const q = `
 	INSERT INTO audit
 		(id, obj_id, obj_domain, obj_name, actor_id, action, data, message, timestamp)

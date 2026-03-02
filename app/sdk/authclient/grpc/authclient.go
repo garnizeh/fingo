@@ -14,10 +14,10 @@ import (
 
 // Client represents a client that can talk to the auth service.
 type Client struct {
-	log      *logger.Logger
-	url      string
-	grpcConn *grpc.ClientConn
 	grpc     grpcauthapp.AuthClient
+	log      *logger.Logger
+	grpcConn *grpc.ClientConn
+	url      string
 }
 
 // New constructs an Auth that can be used to talk with the auth service.
@@ -67,7 +67,7 @@ func (cln *Client) Authenticate(ctx context.Context, authorization string) (auth
 }
 
 // Authorize calls the auth service to authorize the user.
-func (cln *Client) Authorize(ctx context.Context, auth authclient.Authorize) error {
+func (cln *Client) Authorize(ctx context.Context, auth *authclient.Authorize) error {
 	req := authorizeRequestToGRPC(auth)
 
 	if _, err := cln.grpc.Authorize(ctx, req); err != nil {

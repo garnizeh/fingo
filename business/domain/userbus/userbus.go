@@ -28,9 +28,9 @@ var (
 // retrieve data.
 type Storer interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
-	Create(ctx context.Context, usr User) error
-	Update(ctx context.Context, usr User) error
-	Delete(ctx context.Context, usr User) error
+	Create(ctx context.Context, usr *User) error
+	Update(ctx context.Context, usr *User) error
+	Delete(ctx context.Context, usr *User) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]User, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
@@ -38,12 +38,12 @@ type Storer interface {
 }
 
 // ExtBusiness interface provides support for extensions that wrap extra functionality
-// around the core busines logic.
+// around the core business logic.
 type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
-	Create(ctx context.Context, actorID uuid.UUID, nu NewUser) (User, error)
-	Update(ctx context.Context, actorID uuid.UUID, usr User, uu UpdateUser) (User, error)
-	Delete(ctx context.Context, actorID uuid.UUID, usr User) error
+	Create(ctx context.Context, actorID uuid.UUID, nu *NewUser) (User, error)
+	Update(ctx context.Context, actorID uuid.UUID, usr *User, uu UpdateUser) (User, error)
+	Delete(ctx context.Context, actorID uuid.UUID, usr *User) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]User, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
@@ -96,7 +96,7 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 }
 
 // Create adds a new user to the system.
-func (b *Business) Create(ctx context.Context, actorID uuid.UUID, nu NewUser) (User, error) {
+func (b *Business) Create(ctx context.Context, actorID uuid.UUID, nu *NewUser) (User, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(nu.Password.String()), bcrypt.DefaultCost)
 	if err != nil {
 		return User{}, fmt.Errorf("generatefrompassword: %w", err)
@@ -116,7 +116,7 @@ func (b *Business) Create(ctx context.Context, actorID uuid.UUID, nu NewUser) (U
 		DateUpdated:  now,
 	}
 
-	if err := b.storer.Create(ctx, usr); err != nil {
+	if err := b.storer.Create(ctx, &usr); err != nil {
 		return User{}, fmt.Errorf("create: %w", err)
 	}
 
@@ -124,7 +124,7 @@ func (b *Business) Create(ctx context.Context, actorID uuid.UUID, nu NewUser) (U
 }
 
 // Update modifies information about a user.
-func (b *Business) Update(ctx context.Context, actorID uuid.UUID, usr User, uu UpdateUser) (User, error) {
+func (b *Business) Update(ctx context.Context, actorID uuid.UUID, usr *User, uu UpdateUser) (User, error) {
 	if uu.Name != nil {
 		usr.Name = *uu.Name
 	}
@@ -159,11 +159,11 @@ func (b *Business) Update(ctx context.Context, actorID uuid.UUID, usr User, uu U
 		return User{}, fmt.Errorf("update: %w", err)
 	}
 
-	return usr, nil
+	return *usr, nil
 }
 
 // Delete removes the specified user.
-func (b *Business) Delete(ctx context.Context, actorID uuid.UUID, usr User) error {
+func (b *Business) Delete(ctx context.Context, actorID uuid.UUID, usr *User) error {
 	if err := b.storer.Delete(ctx, usr); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}

@@ -26,9 +26,9 @@ var (
 // retrieve data.
 type Storer interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
-	Create(ctx context.Context, hme Home) error
-	Update(ctx context.Context, hme Home) error
-	Delete(ctx context.Context, hme Home) error
+	Create(ctx context.Context, hme *Home) error
+	Update(ctx context.Context, hme *Home) error
+	Delete(ctx context.Context, hme *Home) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Home, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, homeID uuid.UUID) (Home, error)
@@ -39,9 +39,9 @@ type Storer interface {
 // around the core business logic.
 type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
-	Create(ctx context.Context, nh NewHome) (Home, error)
-	Update(ctx context.Context, hme Home, uh UpdateHome) (Home, error)
-	Delete(ctx context.Context, hme Home) error
+	Create(ctx context.Context, nh *NewHome) (Home, error)
+	Update(ctx context.Context, hme *Home, uh UpdateHome) (Home, error)
+	Delete(ctx context.Context, hme *Home) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Home, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, homeID uuid.UUID) (Home, error)
@@ -104,7 +104,14 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 }
 
 // Create adds a new home to the system.
-func (b *Business) Create(ctx context.Context, nh NewHome) (Home, error) {
+func (b *Business) Create(ctx context.Context, nh *NewHome) (Home, error) {
+	if nh == nil {
+		return Home{}, fmt.Errorf("new home payload is nil")
+	}
+
+	if nh.Address == nil {
+		return Home{}, fmt.Errorf("address is required")
+	}
 	usr, err := b.userBus.QueryByID(ctx, nh.UserID)
 	if err != nil {
 		return Home{}, fmt.Errorf("user.querybyid: %s: %w", nh.UserID, err)
@@ -119,7 +126,7 @@ func (b *Business) Create(ctx context.Context, nh NewHome) (Home, error) {
 	hme := Home{
 		ID:   uuid.New(),
 		Type: nh.Type,
-		Address: Address{
+		Address: &Address{
 			Address1: nh.Address.Address1,
 			Address2: nh.Address.Address2,
 			ZipCode:  nh.Address.ZipCode,
@@ -132,7 +139,7 @@ func (b *Business) Create(ctx context.Context, nh NewHome) (Home, error) {
 		DateUpdated: now,
 	}
 
-	if err := b.storer.Create(ctx, hme); err != nil {
+	if err := b.storer.Create(ctx, &hme); err != nil {
 		return Home{}, fmt.Errorf("create: %w", err)
 	}
 
@@ -140,48 +147,65 @@ func (b *Business) Create(ctx context.Context, nh NewHome) (Home, error) {
 }
 
 // Update modifies information about a home.
-func (b *Business) Update(ctx context.Context, hme Home, uh UpdateHome) (Home, error) {
+func (b *Business) Update(ctx context.Context, hme *Home, uh UpdateHome) (Home, error) {
+	if hme == nil {
+		return Home{}, fmt.Errorf("home payload is nil")
+	}
+
+	curr := *hme
+	if curr.Address != nil {
+		addrCopy := *curr.Address
+		curr.Address = &addrCopy
+	}
 	if uh.Type != nil {
-		hme.Type = *uh.Type
+		curr.Type = *uh.Type
 	}
 
 	if uh.Address != nil {
+		if curr.Address == nil {
+			curr.Address = &Address{}
+		}
+
 		if uh.Address.Address1 != nil {
-			hme.Address.Address1 = *uh.Address.Address1
+			curr.Address.Address1 = *uh.Address.Address1
 		}
 
 		if uh.Address.Address2 != nil {
-			hme.Address.Address2 = *uh.Address.Address2
+			curr.Address.Address2 = *uh.Address.Address2
 		}
 
 		if uh.Address.ZipCode != nil {
-			hme.Address.ZipCode = *uh.Address.ZipCode
+			curr.Address.ZipCode = *uh.Address.ZipCode
 		}
 
 		if uh.Address.City != nil {
-			hme.Address.City = *uh.Address.City
+			curr.Address.City = *uh.Address.City
 		}
 
 		if uh.Address.State != nil {
-			hme.Address.State = *uh.Address.State
+			curr.Address.State = *uh.Address.State
 		}
 
 		if uh.Address.Country != nil {
-			hme.Address.Country = *uh.Address.Country
+			curr.Address.Country = *uh.Address.Country
 		}
 	}
 
-	hme.DateUpdated = time.Now()
+	curr.DateUpdated = time.Now()
 
-	if err := b.storer.Update(ctx, hme); err != nil {
+	if err := b.storer.Update(ctx, &curr); err != nil {
 		return Home{}, fmt.Errorf("update: %w", err)
 	}
 
-	return hme, nil
+	return curr, nil
 }
 
 // Delete removes the specified home.
-func (b *Business) Delete(ctx context.Context, hme Home) error {
+func (b *Business) Delete(ctx context.Context, hme *Home) error {
+	if hme == nil {
+		return fmt.Errorf("home payload is nil")
+	}
+
 	if err := b.storer.Delete(ctx, hme); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}

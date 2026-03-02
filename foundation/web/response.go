@@ -13,13 +13,13 @@ import (
 // cases the app layer code has already done so.
 type NoResponse struct{}
 
-// NewNoResponse constructs a no reponse value.
+// NewNoResponse constructs a no response value.
 func NewNoResponse() NoResponse {
 	return NoResponse{}
 }
 
 // Encode implements the Encoder interface.
-func (NoResponse) Encode() ([]byte, string, error) {
+func (NoResponse) Encode() (data []byte, contentType string, err error) {
 	return nil, "", nil
 }
 

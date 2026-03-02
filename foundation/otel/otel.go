@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,15 +25,14 @@ const defaultTraceID = "00000000000000000000000000000000"
 
 // Config defines the information needed to init tracing.
 type Config struct {
+	ExcludedRoutes map[string]struct{}
 	ServiceName    string
 	Host           string
-	ExcludedRoutes map[string]struct{}
 	Probability    float64
 }
 
 // InitTracing configures open telemetry to be used with the service.
 func InitTracing(cfg Config) (trace.TracerProvider, func(ctx context.Context), error) {
-
 	// WARNING: The current settings are using defaults which may not be
 	// compatible with your project. Please review the documentation for
 	// opentelemetry.
@@ -71,7 +71,9 @@ func InitTracing(cfg Config) (trace.TracerProvider, func(ctx context.Context), e
 		)
 
 		teardown = func(ctx context.Context) {
-			tp.Shutdown(ctx)
+			if err := tp.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "otel shutdown: %v\n", err)
+			}
 		}
 
 		traceProvider = tp

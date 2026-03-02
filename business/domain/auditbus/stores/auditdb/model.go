@@ -13,18 +13,18 @@ import (
 )
 
 type audit struct {
-	ID        uuid.UUID          `db:"id"`
-	ObjID     uuid.UUID          `db:"obj_id"`
+	Timestamp time.Time          `db:"timestamp"`
 	ObjDomain string             `db:"obj_domain"`
 	ObjName   string             `db:"obj_name"`
-	ActorID   uuid.UUID          `db:"actor_id"`
 	Action    string             `db:"action"`
-	Data      types.NullJSONText `db:"data"`
 	Message   string             `db:"message"`
-	Timestamp time.Time          `db:"timestamp"`
+	Data      types.NullJSONText `db:"data"`
+	ID        uuid.UUID          `db:"id"`
+	ObjID     uuid.UUID          `db:"obj_id"`
+	ActorID   uuid.UUID          `db:"actor_id"`
 }
 
-func toDBAudit(bus auditbus.Audit) (audit, error) {
+func toDBAudit(bus *auditbus.Audit) (audit, error) {
 	db := audit{
 		ID:        bus.ID,
 		ObjID:     bus.ObjID,
@@ -40,7 +40,7 @@ func toDBAudit(bus auditbus.Audit) (audit, error) {
 	return db, nil
 }
 
-func toBusAudit(db audit) (auditbus.Audit, error) {
+func toBusAudit(db *audit) (auditbus.Audit, error) {
 	domain, err := domain.Parse(db.ObjDomain)
 	if err != nil {
 		return auditbus.Audit{}, fmt.Errorf("parse domain: %w", err)
@@ -69,8 +69,8 @@ func toBusAudit(db audit) (auditbus.Audit, error) {
 func toBusAudits(dbs []audit) ([]auditbus.Audit, error) {
 	audits := make([]auditbus.Audit, len(dbs))
 
-	for i, db := range dbs {
-		a, err := toBusAudit(db)
+	for i := range dbs {
+		a, err := toBusAudit(&dbs[i])
 		if err != nil {
 			return nil, err
 		}

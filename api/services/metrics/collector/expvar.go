@@ -46,8 +46,8 @@ func New(host string) (*Expvar, error) {
 }
 
 // Collect captures metrics on the host configure to this endpoint.
-func (exp *Expvar) Collect() (map[string]any, error) {
-	req, err := http.NewRequest("GET", exp.host, nil)
+func (exp *Expvar) Collect() (data map[string]any, err error) {
+	req, err := http.NewRequest("GET", exp.host, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,11 @@ func (exp *Expvar) Collect() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		msg, err := io.ReadAll(resp.Body)
@@ -66,7 +70,7 @@ func (exp *Expvar) Collect() (map[string]any, error) {
 		return nil, errors.New(string(msg))
 	}
 
-	data := make(map[string]any)
+	data = make(map[string]any)
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return nil, err
 	}

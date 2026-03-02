@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 	var b strings.Builder
 
-	service := strings.ToLower(service)
+	filterService := strings.ToLower(service)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -34,15 +34,21 @@ func main() {
 		m := make(map[string]any)
 		err := json.Unmarshal([]byte(s), &m)
 		if err != nil {
-			if service == "" {
+			if filterService == "" {
 				fmt.Println(s)
 			}
 			continue
 		}
 
 		// If a service filter was provided, check.
-		if service != "" && strings.ToLower(m["service"].(string)) != service {
-			continue
+		if filterService != "" {
+			if s, ok := m["service"].(string); ok {
+				if !strings.EqualFold(s, filterService) {
+					continue
+				}
+			} else {
+				continue
+			}
 		}
 
 		// I like always having a traceid present in the logs.

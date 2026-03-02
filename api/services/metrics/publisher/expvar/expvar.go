@@ -15,13 +15,13 @@ import (
 // Expvar provide our basic publishing.
 type Expvar struct {
 	log    *logger.Logger
-	server http.Server
 	data   map[string]any
+	server http.Server
 	mu     sync.Mutex
 }
 
 // New starts a service for consuming the raw expvar stats.
-func New(log *logger.Logger, host string, route string, readTimeout, writeTimeout time.Duration, idleTimeout time.Duration) *Expvar {
+func New(log *logger.Logger, host, route string, readTimeout, writeTimeout, idleTimeout time.Duration) *Expvar {
 	mux := http.NewServeMux()
 	exp := Expvar{
 		log: log,
@@ -68,9 +68,7 @@ func (exp *Expvar) Stop(shutdownTimeout time.Duration) {
 // Publish is called by the publisher goroutine and saves the raw stats.
 func (exp *Expvar) Publish(data map[string]any) {
 	exp.mu.Lock()
-	{
-		exp.data = data
-	}
+	exp.data = data
 	exp.mu.Unlock()
 }
 
@@ -83,9 +81,7 @@ func (exp *Expvar) handler(w http.ResponseWriter, r *http.Request) {
 
 	var data map[string]any
 	exp.mu.Lock()
-	{
-		data = exp.data
-	}
+	data = exp.data
 	exp.mu.Unlock()
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {

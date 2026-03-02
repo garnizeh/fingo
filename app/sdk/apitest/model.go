@@ -9,11 +9,11 @@ import (
 
 // User extends the dbtest user for api test support.
 type User struct {
-	userbus.User
+	Token    string
 	Products []productbus.Product
 	Homes    []homebus.Home
 	Audits   []auditbus.Audit
-	Token    string
+	userbus.User
 }
 
 // SeedData represents users for api tests.
@@ -24,13 +24,13 @@ type SeedData struct {
 
 // Table represent fields needed for running an api test.
 type Table struct {
+	Input      any
+	GotResp    any
+	ExpResp    any
+	CmpFunc    func(got any, exp any) string
 	Name       string
 	URL        string
 	Token      string
 	Method     string
 	StatusCode int
-	Input      any
-	GotResp    any
-	ExpResp    any
-	CmpFunc    func(got any, exp any) string
 }

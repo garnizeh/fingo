@@ -1,0 +1,85 @@
+run:
+  timeout: 5m
+  tests: true
+  # Ensure all files are checked, not just the changed ones
+  check-invocation: true
+
+linters:
+  disable-all: true
+  enable:
+    # Essential (Bug detection & Error handling)
+    - errcheck
+    - govet
+    - staticcheck
+    - typecheck
+    - unused
+    - gosec        # Security (OWASP standards)
+    - bodyclose    # Checks if HTTP response bodies are closed
+    
+    # Style and Consistency
+    - revive       # Modern replacement for golint
+    - gofmt
+    - goimports
+    - misspell     # Fixes typos in comments and strings
+    - whitespace   # Enforces clean trailing/leading whitespace
+    
+    # Code Quality (Maintainability)
+    - gocyclo      # Measures function complexity
+    - gocritic     # Style, performance, and diagnostic suggestions
+    - nakedret     # Finds naked returns in long functions
+    - prealloc     # Suggests slice pre-allocation
+    - nolintlint   # Ensures //nolint directives are properly formatted and necessary
+
+linters-settings:
+  gofmt:
+    simplify: true
+  gocyclo:
+    # Strict threshold for high-level production code
+    min-complexity: 15
+  revive:
+    severity: warning
+    confidence: 0.8
+  gosec:
+    # Production grade: high sensitivity to potential security risks
+    severity: "low"
+    confidence: "low"
+  govet:
+    enable-all: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - opinionated
+  errcheck:
+    # Report about assignment of errors to blank identifier: `_ = foo()`
+    check-blank: true
+    # Report about functions that return errors which are not checked
+    check-type-assertions: true
+    # Only exclude things that truly don't impact system stability
+    exclude-functions:
+      - fmt.Println
+      - fmt.Printf
+      - fmt.Fprintf    
+
+issues:
+  # Skip generated code, vendored dependencies, and specific directories that are not relevant for linting
+  skip-dirs:
+    - vendor
+    - zarf
+    - api/frontends
+    
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  # Do not use default exclusions to maintain full control over code quality
+  exclude-use-default: false
+  
+  exclude-rules:
+    # Relax error checking and security constraints specifically for test files
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+    # Allow missing docstrings in main and test files
+    - path: (main\.go|.*_test\.go)
+      text: "should have comment"

@@ -2,8 +2,9 @@ package creditcardbus
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 
 	"github.com/garnizeh/fingo/business/types/money"
 	"github.com/garnizeh/fingo/business/types/name"
@@ -14,17 +15,19 @@ import (
 func TestGenerateNewCreditCards(n int, userID uuid.UUID) []NewCreditCard {
 	newCCs := make([]NewCreditCard, n)
 
-	idx := rand.Intn(10000)
+	idx := randomInt(10000)
 	for i := range newCCs {
 		idx++
 
 		ncc := NewCreditCard{
-			UserID:         userID,
-			Name:           name.MustParse(fmt.Sprintf("Card %d", idx)),
-			Limit:          money.MustParse(float64(rand.Intn(10000) + 1000)),
-			ClosingDay:     rand.Intn(28) + 1,
-			DueDay:         rand.Intn(20) + 1,
-			LastFourDigits: fmt.Sprintf("%04d", rand.Intn(10000)),
+			CreditCardIdentity: CreditCardIdentity{
+				Name:           name.MustParse(fmt.Sprintf("Card %d", idx)),
+				LastFourDigits: fmt.Sprintf("%04d", randomInt(10000)),
+			},
+			UserID:     userID,
+			Limit:      money.MustParse(float64(randomInt(10000) + 1000)),
+			ClosingDay: randomInt(28) + 1,
+			DueDay:     randomInt(20) + 1,
 		}
 
 		newCCs[i] = ncc
@@ -48,4 +51,15 @@ func TestGenerateSeedCreditCards(ctx context.Context, n int, api ExtBusiness, us
 	}
 
 	return ccs, nil
+}
+
+func randomInt(limit int) int {
+	if limit <= 0 {
+		return 0
+	}
+	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(limit)))
+	if err != nil {
+		panic(err)
+	}
+	return int(n.Int64())
 }

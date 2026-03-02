@@ -16,11 +16,11 @@ type JobFn func(ctx context.Context)
 
 // Worker manages jobs and the execution of those jobs concurrently.
 type Worker struct {
-	wg         sync.WaitGroup
-	mu         sync.RWMutex
+	running    map[string]context.CancelFunc
 	sem        chan bool
 	isShutdown chan struct{}
-	running    map[string]context.CancelFunc
+	wg         sync.WaitGroup
+	mu         sync.RWMutex
 }
 
 // New constructs a Worker for managing and executing jobs. The capacity value
@@ -54,7 +54,6 @@ func (w *Worker) Running() int {
 
 // Shutdown waits for all jobs to complete before it returns.
 func (w *Worker) Shutdown(ctx context.Context) error {
-
 	// Signal we are shutting down.
 	close(w.isShutdown)
 
@@ -89,7 +88,6 @@ func (w *Worker) Shutdown(ctx context.Context) error {
 // Start lookups a job by key and launches a goroutine to perform the work. A
 // work key is returned so the caller can cancel work early.
 func (w *Worker) Start(ctx context.Context, jobFn JobFn) (string, error) {
-
 	// We need to block here waiting to capture a semaphore, timeout or shutdown.
 	// The shutdown is first to handle that event as priority.
 	select {
@@ -118,7 +116,6 @@ func (w *Worker) Start(ctx context.Context, jobFn JobFn) (string, error) {
 	// Launch a goroutine to perform the work.
 	w.wg.Add(1)
 	go func() {
-
 		// Do this in a separate defer in case the other defer panics.
 		// This adds a value back to the semaphore allowing a new message
 		// to be processed.

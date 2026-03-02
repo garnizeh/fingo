@@ -1,3 +1,4 @@
+// Package creditcardapp maintains the app layer api for the credit card domain.
 package creditcardapp
 
 import (
@@ -18,23 +19,24 @@ type CreditCard struct {
 	ID             string  `json:"id"`
 	UserID         string  `json:"userID"`
 	Name           string  `json:"name"`
+	LastFourDigits string  `json:"lastFourDigits"`
+	DateCreated    string  `json:"dateCreated"`
+	DateUpdated    string  `json:"dateUpdated"`
 	Limit          float64 `json:"limit"`
 	ClosingDay     int     `json:"closingDay"`
 	DueDay         int     `json:"dueDay"`
-	LastFourDigits string  `json:"lastFourDigits"`
 	Enabled        bool    `json:"enabled"`
-	DateCreated    string  `json:"dateCreated"`
-	DateUpdated    string  `json:"dateUpdated"`
 }
 
 // Encode implements the encoder interface.
-func (app CreditCard) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(app)
-	return data, "application/json", err
+func (app *CreditCard) Encode() (data []byte, contentType string, err error) {
+	data, err = json.Marshal(app)
+	contentType = "application/json"
+	return
 }
 
-func toAppCreditCard(cc creditcardbus.CreditCard) CreditCard {
-	return CreditCard{
+func toAppCreditCard(cc *creditcardbus.CreditCard) *CreditCard {
+	return &CreditCard{
 		ID:             cc.ID.String(),
 		UserID:         cc.UserID.String(),
 		Name:           cc.Name.String(),
@@ -50,8 +52,8 @@ func toAppCreditCard(cc creditcardbus.CreditCard) CreditCard {
 
 func toAppCreditCards(ccs []creditcardbus.CreditCard) []CreditCard {
 	app := make([]CreditCard, len(ccs))
-	for i, cc := range ccs {
-		app[i] = toAppCreditCard(cc)
+	for i := range ccs {
+		app[i] = *toAppCreditCard(&ccs[i])
 	}
 
 	return app
@@ -62,10 +64,10 @@ func toAppCreditCards(ccs []creditcardbus.CreditCard) []CreditCard {
 // NewCreditCard defines the data needed to add a new credit card.
 type NewCreditCard struct {
 	Name           string  `json:"name"`
+	LastFourDigits string  `json:"lastFourDigits"`
 	Limit          float64 `json:"limit"`
 	ClosingDay     int     `json:"closingDay"`
 	DueDay         int     `json:"dueDay"`
-	LastFourDigits string  `json:"lastFourDigits"`
 }
 
 // Decode implements the decoder interface.
@@ -96,12 +98,14 @@ func toBusNewCreditCard(ctx context.Context, app NewCreditCard) (creditcardbus.N
 	}
 
 	bus := creditcardbus.NewCreditCard{
-		UserID:         userID,
-		Name:           name,
-		Limit:          limit,
-		ClosingDay:     app.ClosingDay,
-		DueDay:         app.DueDay,
-		LastFourDigits: app.LastFourDigits,
+		CreditCardIdentity: creditcardbus.CreditCardIdentity{
+			Name:           name,
+			LastFourDigits: app.LastFourDigits,
+		},
+		UserID:     userID,
+		Limit:      limit,
+		ClosingDay: app.ClosingDay,
+		DueDay:     app.DueDay,
 	}
 
 	return bus, nil

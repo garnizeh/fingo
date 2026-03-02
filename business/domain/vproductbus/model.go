@@ -11,12 +11,12 @@ import (
 
 // Product represents an individual product with extended information.
 type Product struct {
-	ID          uuid.UUID
-	UserID      uuid.UUID
-	Name        name.Name
-	Cost        money.Money
-	Quantity    quantity.Quantity
 	DateCreated time.Time
 	DateUpdated time.Time
+	Name        name.Name
 	UserName    name.Name
+	Cost        money.Money
+	Quantity    quantity.Quantity
+	ID          uuid.UUID
+	UserID      uuid.UUID
 }

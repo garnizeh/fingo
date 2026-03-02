@@ -33,24 +33,30 @@ type Home struct {
 }
 
 // Encode implements the encoder interface.
-func (app Home) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(app)
-	return data, "application/json", err
+func (app *Home) Encode() (data []byte, contentType string, err error) {
+	data, err = json.Marshal(app)
+	contentType = "application/json"
+	return
 }
 
-func toAppHome(hme homebus.Home) Home {
-	return Home{
-		ID:     hme.ID.String(),
-		UserID: hme.UserID.String(),
-		Type:   hme.Type.String(),
-		Address: Address{
+func toAppHome(hme *homebus.Home) *Home {
+	var address Address
+	if hme.Address != nil {
+		address = Address{
 			Address1: hme.Address.Address1,
 			Address2: hme.Address.Address2,
 			ZipCode:  hme.Address.ZipCode,
 			City:     hme.Address.City,
 			State:    hme.Address.State,
 			Country:  hme.Address.Country,
-		},
+		}
+	}
+
+	return &Home{
+		ID:          hme.ID.String(),
+		UserID:      hme.UserID.String(),
+		Type:        hme.Type.String(),
+		Address:     address,
 		DateCreated: hme.DateCreated.Format(time.RFC3339),
 		DateUpdated: hme.DateUpdated.Format(time.RFC3339),
 	}
@@ -58,8 +64,8 @@ func toAppHome(hme homebus.Home) Home {
 
 func toAppHomes(homes []homebus.Home) []Home {
 	app := make([]Home, len(homes))
-	for i, hme := range homes {
-		app[i] = toAppHome(hme)
+	for i := range homes {
+		app[i] = *toAppHome(&homes[i])
 	}
 
 	return app
@@ -88,7 +94,11 @@ func (app *NewHome) Decode(data []byte) error {
 	return json.Unmarshal(data, app)
 }
 
-func toBusNewHome(ctx context.Context, app NewHome) (homebus.NewHome, error) {
+func toBusNewHome(ctx context.Context, app *NewHome) (homebus.NewHome, error) {
+	if app == nil {
+		return homebus.NewHome{}, fmt.Errorf("new home payload is nil")
+	}
+
 	userID, err := mid.GetUserID(ctx)
 	if err != nil {
 		return homebus.NewHome{}, fmt.Errorf("getuserid: %w", err)
@@ -108,7 +118,7 @@ func toBusNewHome(ctx context.Context, app NewHome) (homebus.NewHome, error) {
 	bus := homebus.NewHome{
 		UserID: userID,
 		Type:   typ,
-		Address: homebus.Address{
+		Address: &homebus.Address{
 			Address1: app.Address.Address1,
 			Address2: app.Address.Address2,
 			ZipCode:  app.Address.ZipCode,
@@ -144,7 +154,11 @@ func (app *UpdateHome) Decode(data []byte) error {
 	return json.Unmarshal(data, app)
 }
 
-func toBusUpdateHome(app UpdateHome) (homebus.UpdateHome, error) {
+func toBusUpdateHome(app *UpdateHome) (homebus.UpdateHome, error) {
+	if app == nil {
+		return homebus.UpdateHome{}, fmt.Errorf("update home payload is nil")
+	}
+
 	var errors errs.FieldErrors
 
 	var t home.Home

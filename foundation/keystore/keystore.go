@@ -62,14 +62,14 @@ func (ks *KeyStore) LoadByJSON(document string) (int, error) {
 		return 0, fmt.Errorf("converting private PEM to public: %w", err)
 	}
 
-	key := key{
+	entry := key{
 		privatePEM: d.PEM,
 		publicPEM:  publicPEM,
 	}
 
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	ks.store[d.Key] = key
+	ks.store[d.Key] = entry
 
 	return len(ks.store), nil
 }
@@ -80,9 +80,9 @@ func (ks *KeyStore) LoadByJSON(document string) (int, error) {
 // Example: ks.LoadRSAKeys(os.DirFS("/zarf/keys/"))
 // Example: /zarf/keys/54bb2165-71e1-41a6-af3e-7da4a0e1e2c1.pem
 func (ks *KeyStore) LoadByFileSystem(fsys fs.FS) (int, error) {
-	fn := func(fileName string, dirEntry fs.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("walkdir failure: %w", err)
+	fn := func(fileName string, dirEntry fs.DirEntry, walkErr error) (visitErr error) {
+		if walkErr != nil {
+			return fmt.Errorf("walkdir failure: %w", walkErr)
 		}
 
 		if dirEntry.IsDir() {
@@ -97,7 +97,11 @@ func (ks *KeyStore) LoadByFileSystem(fsys fs.FS) (int, error) {
 		if err != nil {
 			return fmt.Errorf("opening key file: %w", err)
 		}
-		defer file.Close()
+		defer func() {
+			if cerr := file.Close(); cerr != nil && visitErr == nil {
+				visitErr = fmt.Errorf("closing key file: %w", cerr)
+			}
+		}()
 
 		// limit PEM file size to 1 megabyte. This should be reasonable for
 		// almost any PEM file and prevents shenanigans like linking the file
@@ -113,14 +117,14 @@ func (ks *KeyStore) LoadByFileSystem(fsys fs.FS) (int, error) {
 			return fmt.Errorf("converting private PEM to public: %w", err)
 		}
 
-		key := key{
+		entry := key{
 			privatePEM: privatePEM,
 			publicPEM:  publicPEM,
 		}
 
 		ks.mu.Lock()
 		defer ks.mu.Unlock()
-		ks.store[strings.TrimSuffix(dirEntry.Name(), ".pem")] = key
+		ks.store[strings.TrimSuffix(dirEntry.Name(), ".pem")] = entry
 
 		return nil
 	}

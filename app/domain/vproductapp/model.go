@@ -13,20 +13,21 @@ type Product struct {
 	ID          string  `json:"id"`
 	UserID      string  `json:"userID"`
 	Name        string  `json:"name"`
-	Cost        float64 `json:"cost"`
-	Quantity    int     `json:"quantity"`
 	DateCreated string  `json:"dateCreated"`
 	DateUpdated string  `json:"dateUpdated"`
 	UserName    string  `json:"userName"`
+	Cost        float64 `json:"cost"`
+	Quantity    int     `json:"quantity"`
 }
 
 // Encode implements the encoder interface.
-func (app Product) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(app)
-	return data, "application/json", err
+func (app *Product) Encode() (data []byte, comtentType string, err error) {
+	data, err = json.Marshal(app)
+	comtentType = "application/json"
+	return
 }
 
-func toAppProduct(prd vproductbus.Product) Product {
+func toAppProduct(prd *vproductbus.Product) Product {
 	return Product{
 		ID:          prd.ID.String(),
 		UserID:      prd.UserID.String(),
@@ -41,8 +42,8 @@ func toAppProduct(prd vproductbus.Product) Product {
 
 func toAppProducts(prds []vproductbus.Product) []Product {
 	app := make([]Product, len(prds))
-	for i, prd := range prds {
-		app[i] = toAppProduct(prd)
+	for i := range prds {
+		app[i] = toAppProduct(&prds[i])
 	}
 
 	return app

@@ -34,7 +34,7 @@ func (ext *Extension) NewWithTx(tx sqldb.CommitRollbacker) (userbus.ExtBusiness,
 }
 
 // Create applies otel to the user creation process.
-func (ext *Extension) Create(ctx context.Context, actorID uuid.UUID, nu userbus.NewUser) (userbus.User, error) {
+func (ext *Extension) Create(ctx context.Context, actorID uuid.UUID, nu *userbus.NewUser) (userbus.User, error) {
 	ctx, span := otel.AddSpan(ctx, "business.userbus.create")
 	defer span.End()
 
@@ -47,20 +47,20 @@ func (ext *Extension) Create(ctx context.Context, actorID uuid.UUID, nu userbus.
 }
 
 // Update applies otel to the user update process.
-func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, usr userbus.User, uu userbus.UpdateUser) (userbus.User, error) {
+func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, usr *userbus.User, uu userbus.UpdateUser) (userbus.User, error) {
 	ctx, span := otel.AddSpan(ctx, "business.userbus.update")
 	defer span.End()
 
-	usr, err := ext.bus.Update(ctx, actorID, usr, uu)
+	updatedUsr, err := ext.bus.Update(ctx, actorID, usr, uu)
 	if err != nil {
 		return userbus.User{}, err
 	}
 
-	return usr, nil
+	return updatedUsr, nil
 }
 
 // Delete applies otel to the user deletion process.
-func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, usr userbus.User) error {
+func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, usr *userbus.User) error {
 	ctx, span := otel.AddSpan(ctx, "business.userbus.delete")
 	defer span.End()
 

@@ -51,26 +51,23 @@ func (s InvoiceStatus) String() string {
 
 // CreditCard represents an individual credit card.
 type CreditCard struct {
-	ID             uuid.UUID
-	UserID         uuid.UUID
-	Name           name.Name
-	Limit          money.Money
-	ClosingDay     int
-	DueDay         int
-	LastFourDigits string
-	Enabled        bool
-	DateCreated    time.Time
-	DateUpdated    time.Time
+	CreditCardTimestamps
+	CreditCardIdentity
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	Limit      money.Money
+	ClosingDay int
+	DueDay     int
+	Enabled    bool
 }
 
 // NewCreditCard is what we require from clients when adding a credit card.
 type NewCreditCard struct {
-	UserID         uuid.UUID
-	Name           name.Name
-	Limit          money.Money
-	ClosingDay     int
-	DueDay         int
-	LastFourDigits string
+	CreditCardIdentity
+	UserID     uuid.UUID
+	ClosingDay int
+	DueDay     int
+	Limit      money.Money
 }
 
 // UpdateCreditCard defines what information may be provided to modify an
@@ -83,25 +80,35 @@ type UpdateCreditCard struct {
 	Enabled    *bool
 }
 
+type CreditCardTimestamps struct {
+	DateCreated time.Time
+	DateUpdated time.Time
+}
+
+type CreditCardIdentity struct {
+	Name           name.Name
+	LastFourDigits string
+}
+
 // Invoice represents a credit card invoice for a specific month.
 type Invoice struct {
-	ID             uuid.UUID
-	CreditCardID   uuid.UUID
 	ReferenceMonth time.Time
-	TotalAmount    money.Money
-	Status         InvoiceStatus
 	DueDate        time.Time
 	DateCreated    time.Time
 	DateUpdated    time.Time
+	Status         InvoiceStatus
+	TotalAmount    money.Money
+	ID             uuid.UUID
+	CreditCardID   uuid.UUID
 }
 
 // NewInvoice is what we require from clients when adding an invoice.
 type NewInvoice struct {
-	CreditCardID   uuid.UUID
 	ReferenceMonth time.Time
-	TotalAmount    money.Money
-	Status         InvoiceStatus
 	DueDate        time.Time
+	Status         InvoiceStatus
+	TotalAmount    money.Money
+	CreditCardID   uuid.UUID
 }
 
 // UpdateInvoice defines what information may be provided to modify an

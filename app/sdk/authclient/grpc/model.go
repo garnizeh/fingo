@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func authorizeRequestToGRPC(auth authclient.Authorize) *grpcauthapp.AuthorizeRequest {
+func authorizeRequestToGRPC(auth *authclient.Authorize) *grpcauthapp.AuthorizeRequest {
 	cb := grpcauthapp.Claims_builder{
 		Id:        new(auth.Claims.ID),
 		Issuer:    new(auth.Claims.Issuer),

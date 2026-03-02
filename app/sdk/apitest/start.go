@@ -26,7 +26,7 @@ func New(t *testing.T, testName string) *Test {
 
 	// -------------------------------------------------------------------------
 
-	server := httptest.NewServer(mux.WebAPI(mux.Config{
+	handler := mux.WebAPI(&mux.Config{
 		Log: db.Log,
 		DB:  db.DB,
 		BusConfig: mux.BusConfig{
@@ -35,7 +35,8 @@ func New(t *testing.T, testName string) *Test {
 		AuthConfig: mux.AuthConfig{
 			Auth: auth,
 		},
-	}, authbuild.Routes()))
+	}, authbuild.Routes())
+	server := httptest.NewServer(handler)
 
 	authClient, err := http.New(db.Log, server.URL)
 	if err != nil {
@@ -44,7 +45,7 @@ func New(t *testing.T, testName string) *Test {
 
 	// -------------------------------------------------------------------------
 
-	mux := mux.WebAPI(mux.Config{
+	mux := mux.WebAPI(&mux.Config{
 		Log: db.Log,
 		DB:  db.DB,
 		BusConfig: mux.BusConfig{

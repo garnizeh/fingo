@@ -27,9 +27,9 @@ var (
 // retrieve data.
 type Storer interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
-	Create(ctx context.Context, prd Product) error
-	Update(ctx context.Context, prd Product) error
-	Delete(ctx context.Context, prd Product) error
+	Create(ctx context.Context, prd *Product) error
+	Update(ctx context.Context, prd *Product) error
+	Delete(ctx context.Context, prd *Product) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Product, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, productID uuid.UUID) (Product, error)
@@ -40,9 +40,9 @@ type Storer interface {
 // around the core business logic.
 type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
-	Create(ctx context.Context, np NewProduct) (Product, error)
-	Update(ctx context.Context, prd Product, up UpdateProduct) (Product, error)
-	Delete(ctx context.Context, prd Product) error
+	Create(ctx context.Context, np *NewProduct) (Product, error)
+	Update(ctx context.Context, prd *Product, up UpdateProduct) (Product, error)
+	Delete(ctx context.Context, prd *Product) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Product, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, productID uuid.UUID) (Product, error)
@@ -105,7 +105,7 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 }
 
 // Create adds a new product to the system.
-func (b *Business) Create(ctx context.Context, np NewProduct) (Product, error) {
+func (b *Business) Create(ctx context.Context, np *NewProduct) (Product, error) {
 	usr, err := b.userBus.QueryByID(ctx, np.UserID)
 	if err != nil {
 		return Product{}, fmt.Errorf("user.querybyid: %s: %w", np.UserID, err)
@@ -127,7 +127,7 @@ func (b *Business) Create(ctx context.Context, np NewProduct) (Product, error) {
 		DateUpdated: now,
 	}
 
-	if err := b.storer.Create(ctx, prd); err != nil {
+	if err := b.storer.Create(ctx, &prd); err != nil {
 		return Product{}, fmt.Errorf("create: %w", err)
 	}
 
@@ -135,7 +135,7 @@ func (b *Business) Create(ctx context.Context, np NewProduct) (Product, error) {
 }
 
 // Update modifies information about a product.
-func (b *Business) Update(ctx context.Context, prd Product, up UpdateProduct) (Product, error) {
+func (b *Business) Update(ctx context.Context, prd *Product, up UpdateProduct) (Product, error) {
 	if up.Name != nil {
 		prd.Name = *up.Name
 	}
@@ -154,11 +154,11 @@ func (b *Business) Update(ctx context.Context, prd Product, up UpdateProduct) (P
 		return Product{}, fmt.Errorf("update: %w", err)
 	}
 
-	return prd, nil
+	return *prd, nil
 }
 
 // Delete removes the specified product.
-func (b *Business) Delete(ctx context.Context, prd Product) error {
+func (b *Business) Delete(ctx context.Context, prd *Product) error {
 	if err := b.storer.Delete(ctx, prd); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}

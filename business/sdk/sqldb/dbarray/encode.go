@@ -65,7 +65,7 @@ type parameterStatus struct {
 // Calling EnableInfinityTS after a connection has been established results in
 // undefined behavior.  If EnableInfinityTS is called more than once, it will
 // panic.
-func EnableInfinityTS(negative time.Time, positive time.Time) {
+func EnableInfinityTS(negative, positive time.Time) {
 	if infinityTSEnabled {
 		panic(infinityTSEnabledAlready)
 	}
@@ -166,7 +166,6 @@ func errorf(s string, args ...any) {
 // "escape" format are supported.
 func parseBytea(s []byte) (result []byte, err error) {
 	if len(s) >= 2 && bytes.Equal(s[:2], []byte("\\x")) {
-		// bytea_output = hex
 		s = s[2:] // trim off leading "\\x"
 		result = make([]byte, hex.DecodedLen(len(s)))
 		_, err := hex.Decode(result, s)
@@ -174,7 +173,6 @@ func parseBytea(s []byte) (result []byte, err error) {
 			return nil, err
 		}
 	} else {
-		// bytea_output = escape
 		for len(s) > 0 {
 			if s[0] == '\\' {
 				// escaped '\\'
@@ -221,11 +219,12 @@ func encodeBytea(serverVersion int, v []byte) (result []byte) {
 	} else {
 		// .. or resort to "escape"
 		for _, b := range v {
-			if b == '\\' {
+			switch {
+			case b == '\\':
 				result = append(result, '\\', '\\')
-			} else if b < 0x20 || b > 0x7e {
+			case b < 0x20 || b > 0x7e:
 				result = append(result, fmt.Appendf(nil, "\\%03o", b)...)
-			} else {
+			default:
 				result = append(result, b)
 			}
 		}

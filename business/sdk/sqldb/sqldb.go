@@ -45,7 +45,7 @@ type Config struct {
 }
 
 // Open knows how to open a database connection based on the configuration.
-func Open(cfg Config) (*sqlx.DB, error) {
+func Open(cfg *Config) (*sqlx.DB, error) {
 	sslMode := "require"
 	if cfg.DisableTLS {
 		sslMode = "disable"
@@ -79,7 +79,6 @@ func Open(cfg Config) (*sqlx.DB, error) {
 // StatusCheck returns nil if it can successfully talk to the database. It
 // returns a non-nil error otherwise.
 func StatusCheck(ctx context.Context, db *sqlx.DB) error {
-
 	// If the user doesn't give us a deadline set 1 second.
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
@@ -188,18 +187,18 @@ func namedQuerySlice[T any](ctx context.Context, log *logger.Logger, db sqlx.Ext
 	switch withIn {
 	case true:
 		rows, err = func() (*sqlx.Rows, error) {
-			named, args, err := sqlx.Named(query, data)
-			if err != nil {
-				return nil, err
+			named, args, errNamed := sqlx.Named(query, data)
+			if errNamed != nil {
+				return nil, errNamed
 			}
 
-			query, args, err := sqlx.In(named, args...)
-			if err != nil {
-				return nil, err
+			queryIn, args, errIn := sqlx.In(named, args...)
+			if errIn != nil {
+				return nil, errIn
 			}
 
-			query = db.Rebind(query)
-			return db.QueryxContext(ctx, query, args...)
+			queryIn = db.Rebind(queryIn)
+			return db.QueryxContext(ctx, queryIn, args...)
 		}()
 
 	default:
@@ -213,7 +212,13 @@ func namedQuerySlice[T any](ctx context.Context, log *logger.Logger, db sqlx.Ext
 		}
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		if rows != nil {
+			if cerr := rows.Close(); cerr != nil {
+				err = errors.Join(err, fmt.Errorf("closing rows: %w", cerr))
+			}
+		}
+	}()
 
 	var slice []T
 	for rows.Next() {
@@ -236,18 +241,18 @@ func QueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, qu
 
 // NamedQueryStruct is a helper function for executing queries that return a
 // single value to be unmarshalled into a struct type where field replacement is necessary.
-func NamedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any) error {
+func NamedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data, dest any) error {
 	return namedQueryStruct(ctx, log, db, query, data, dest, false)
 }
 
 // NamedQueryStructUsingIn is a helper function for executing queries that return
 // a single value to be unmarshalled into a struct type where field replacement
 // is necessary. Use this if the query has an IN clause.
-func NamedQueryStructUsingIn(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any) error {
+func NamedQueryStructUsingIn(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data, dest any) error {
 	return namedQueryStruct(ctx, log, db, query, data, dest, true)
 }
 
-func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any, withIn bool) (err error) {
+func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data, dest any, withIn bool) (err error) {
 	q := queryString(query, data)
 
 	defer func() {
@@ -264,18 +269,18 @@ func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContex
 	switch withIn {
 	case true:
 		rows, err = func() (*sqlx.Rows, error) {
-			named, args, err := sqlx.Named(query, data)
-			if err != nil {
-				return nil, err
+			named, args, errNamed := sqlx.Named(query, data)
+			if errNamed != nil {
+				return nil, errNamed
 			}
 
-			query, args, err := sqlx.In(named, args...)
-			if err != nil {
-				return nil, err
+			queryIn, args, errIn := sqlx.In(named, args...)
+			if errIn != nil {
+				return nil, errIn
 			}
 
-			query = db.Rebind(query)
-			return db.QueryxContext(ctx, query, args...)
+			queryIn = db.Rebind(queryIn)
+			return db.QueryxContext(ctx, queryIn, args...)
 		}()
 
 	default:
@@ -289,7 +294,13 @@ func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContex
 		}
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		if rows != nil {
+			if cerr := rows.Close(); cerr != nil {
+				err = errors.Join(err, fmt.Errorf("closing rows: %w", cerr))
+			}
+		}
+	}()
 
 	if !rows.Next() {
 		return ErrDBNotFound

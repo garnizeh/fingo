@@ -43,12 +43,12 @@ func (a *app) newWithTx(ctx context.Context) (*app, error) {
 		return nil, err
 	}
 
-	app := app{
+	newApp := app{
 		userBus:    userBus,
 		productBus: productBus,
 	}
 
-	return &app, nil
+	return &newApp, nil
 }
 
 func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
@@ -67,12 +67,12 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	nu, err := toBusNewUser(app.User)
+	nu, err := toBusNewUser(&app.User)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	usr, err := a.userBus.Create(ctx, mid.GetSubjectID(ctx), nu)
+	usr, err := a.userBus.Create(ctx, mid.GetSubjectID(ctx), &nu)
 	if err != nil {
 		if errors.Is(err, userbus.ErrUniqueEmail) {
 			return errs.New(errs.Aborted, userbus.ErrUniqueEmail)
@@ -82,10 +82,10 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 
 	np.UserID = usr.ID
 
-	prd, err := a.productBus.Create(ctx, np)
+	prd, err := a.productBus.Create(ctx, &np)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "create: prd[%+v]: %s", prd, err)
 	}
 
-	return toAppProduct(prd)
+	return toAppProduct(&prd)
 }

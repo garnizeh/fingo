@@ -35,12 +35,12 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	prd, err := a.productBus.Create(ctx, np)
+	prd, err := a.productBus.Create(ctx, &np)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "create: prd[%+v]: %s", prd, err)
 	}
 
-	return toAppProduct(prd)
+	return toAppProduct(&prd)
 }
 
 func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
@@ -59,12 +59,12 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "product missing in context: %s", err)
 	}
 
-	updPrd, err := a.productBus.Update(ctx, prd, up)
+	updPrd, err := a.productBus.Update(ctx, &prd, up)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "update: productID[%s] up[%+v]: %s", prd.ID, app, err)
 	}
 
-	return toAppProduct(updPrd)
+	return toAppProduct(&updPrd)
 }
 
 func (a *app) delete(ctx context.Context, _ *http.Request) web.Encoder {
@@ -73,7 +73,7 @@ func (a *app) delete(ctx context.Context, _ *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "productID missing in context: %s", err)
 	}
 
-	if err := a.productBus.Delete(ctx, prd); err != nil {
+	if err := a.productBus.Delete(ctx, &prd); err != nil {
 		return errs.Errorf(errs.Internal, "delete: productID[%s]: %s", prd.ID, err)
 	}
 
@@ -88,9 +88,12 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("page", err)
 	}
 
-	filter, err := parseFilter(qp)
+	filter, err := qp.parseFilter()
 	if err != nil {
-		return err.(*errs.Error)
+		if enc, ok := err.(web.Encoder); ok {
+			return enc
+		}
+		return errs.New(errs.Internal, err)
 	}
 
 	orderBy, err := order.Parse(orderByFields, qp.OrderBy, productbus.DefaultOrderBy)
@@ -117,5 +120,5 @@ func (a *app) queryByID(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "querybyid: %s", err)
 	}
 
-	return toAppProduct(prd)
+	return toAppProduct(&prd)
 }
