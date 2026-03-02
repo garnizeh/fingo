@@ -46,7 +46,6 @@ func main() {
 }
 
 func run(ctx context.Context, log *logger.Logger) error {
-
 	// -------------------------------------------------------------------------
 	// GOMAXPROCS
 
@@ -59,6 +58,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 		conf.Version
 		Web struct {
 			DebugHost string `conf:"default:0.0.0.0:4010"`
+		}
+		Collect struct {
+			From string `conf:"default:http://localhost:3010/debug/vars"`
+		}
+		Publish struct {
+			To       string        `conf:"default:console"`
+			Interval time.Duration `conf:"default:5s"`
 		}
 		Expvar struct {
 			Host            string        `conf:"default:0.0.0.0:4000"`
@@ -75,13 +81,6 @@ func run(ctx context.Context, log *logger.Logger) error {
 			WriteTimeout    time.Duration `conf:"default:10s"`
 			IdleTimeout     time.Duration `conf:"default:120s"`
 			ShutdownTimeout time.Duration `conf:"default:5s"`
-		}
-		Collect struct {
-			From string `conf:"default:http://localhost:3010/debug/vars"`
-		}
-		Publish struct {
-			To       string        `conf:"default:console"`
-			Interval time.Duration `conf:"default:5s"`
 		}
 	}{
 		Version: conf.Version{
@@ -120,22 +119,28 @@ func run(ctx context.Context, log *logger.Logger) error {
 	go func() {
 		log.Info(ctx, "startup", "status", "debug router started", "host", cfg.Web.DebugHost)
 
-		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.Mux()); err != nil {
-			log.Error(ctx, "shutdown", "status", "debug router closed", "host", cfg.Web.DebugHost, "err", err)
+		srv := http.Server{
+			Addr:              cfg.Web.DebugHost,
+			Handler:           debug.Mux(),
+			ReadHeaderTimeout: time.Second,
+		}
+
+		if errSRV := srv.ListenAndServe(); errSRV != nil {
+			log.Error(ctx, "shutdown", "status", "debug router closed", "host", cfg.Web.DebugHost, "err", errSRV)
 		}
 	}()
 
 	// -------------------------------------------------------------------------
 	// Start Prometheus Service
 
-	prom := prometheussrv.New(log, cfg.Prometheus.Host, cfg.Prometheus.Route, cfg.Prometheus.ReadTimeout, cfg.Prometheus.WriteTimeout, cfg.Prometheus.IdleTimeout)
-	defer prom.Stop(cfg.Prometheus.ShutdownTimeout)
+	promSrv := prometheussrv.New(log, cfg.Prometheus.Host, cfg.Prometheus.Route, cfg.Prometheus.ReadTimeout, cfg.Prometheus.WriteTimeout, cfg.Prometheus.IdleTimeout)
+	defer promSrv.Stop(cfg.Prometheus.ShutdownTimeout)
 
 	// -------------------------------------------------------------------------
 	// Start expvar Service
 
-	exp := expvarsrv.New(log, cfg.Expvar.Host, cfg.Expvar.Route, cfg.Expvar.ReadTimeout, cfg.Expvar.WriteTimeout, cfg.Expvar.IdleTimeout)
-	defer exp.Stop(cfg.Expvar.ShutdownTimeout)
+	expSrv := expvarsrv.New(log, cfg.Expvar.Host, cfg.Expvar.Route, cfg.Expvar.ReadTimeout, cfg.Expvar.WriteTimeout, cfg.Expvar.IdleTimeout)
+	defer expSrv.Stop(cfg.Expvar.ShutdownTimeout)
 
 	// -------------------------------------------------------------------------
 	// Start collectors and publishers
@@ -147,7 +152,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	stdout := publisher.NewStdout(log)
 
-	publish, err := publisher.New(log, collector, cfg.Publish.Interval, prom.Publish, exp.Publish, stdout.Publish)
+	publish, err := publisher.New(log, collector, cfg.Publish.Interval, promSrv.Publish, expSrv.Publish, stdout.Publish)
 	if err != nil {
 		return fmt.Errorf("starting publisher: %w", err)
 	}

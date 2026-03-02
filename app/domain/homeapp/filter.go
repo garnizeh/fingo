@@ -38,7 +38,7 @@ func parseQueryParams(r *http.Request) queryParams {
 	return filter
 }
 
-func parseFilter(qp queryParams) (homebus.QueryFilter, error) {
+func (qp *queryParams) parseFilter() (homebus.QueryFilter, error) {
 	var fieldErrors errs.FieldErrors
 	var filter homebus.QueryFilter
 

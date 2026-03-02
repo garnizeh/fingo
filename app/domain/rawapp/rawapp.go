@@ -13,5 +13,7 @@ func rawHandler(w http.ResponseWriter, r *http.Request) {
 		Status: "RAW ENDPOINT",
 	}
 
-	json.NewEncoder(w).Encode(status)
+	if err := json.NewEncoder(w).Encode(status); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

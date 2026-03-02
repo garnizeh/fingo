@@ -12,16 +12,16 @@ import (
 )
 
 type productDB struct {
-	ID          uuid.UUID `db:"product_id"`
-	UserID      uuid.UUID `db:"user_id"`
+	DateCreated time.Time `db:"date_created"`
+	DateUpdated time.Time `db:"date_updated"`
 	Name        string    `db:"name"`
 	Cost        float64   `db:"cost"`
 	Quantity    int       `db:"quantity"`
-	DateCreated time.Time `db:"date_created"`
-	DateUpdated time.Time `db:"date_updated"`
+	ID          uuid.UUID `db:"product_id"`
+	UserID      uuid.UUID `db:"user_id"`
 }
 
-func toDBProduct(bus productbus.Product) productDB {
+func toDBProduct(bus *productbus.Product) productDB {
 	db := productDB{
 		ID:          bus.ID,
 		UserID:      bus.UserID,
@@ -35,7 +35,7 @@ func toDBProduct(bus productbus.Product) productDB {
 	return db
 }
 
-func toBusProduct(db productDB) (productbus.Product, error) {
+func toBusProduct(db *productDB) (productbus.Product, error) {
 	name, err := name.Parse(db.Name)
 	if err != nil {
 		return productbus.Product{}, fmt.Errorf("parse name: %w", err)
@@ -67,9 +67,9 @@ func toBusProduct(db productDB) (productbus.Product, error) {
 func toBusProducts(dbs []productDB) ([]productbus.Product, error) {
 	bus := make([]productbus.Product, len(dbs))
 
-	for i, db := range dbs {
+	for i := range dbs {
 		var err error
-		bus[i], err = toBusProduct(db)
+		bus[i], err = toBusProduct(&dbs[i])
 		if err != nil {
 			return nil, err
 		}

@@ -52,7 +52,7 @@ func (ext *Extension) Create(ctx context.Context, actorID uuid.UUID, ncc creditc
 		Message:   "credit card created",
 	}
 
-	if _, err := ext.auditBus.Create(ctx, na); err != nil {
+	if _, err := ext.auditBus.Create(ctx, &na); err != nil {
 		return creditcardbus.CreditCard{}, err
 	}
 
@@ -60,8 +60,8 @@ func (ext *Extension) Create(ctx context.Context, actorID uuid.UUID, ncc creditc
 }
 
 // Update applies auditing to the credit card update process.
-func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, cc creditcardbus.CreditCard, ucc creditcardbus.UpdateCreditCard) (creditcardbus.CreditCard, error) {
-	cc, err := ext.bus.Update(ctx, actorID, cc, ucc)
+func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, cc *creditcardbus.CreditCard, ucc creditcardbus.UpdateCreditCard) (creditcardbus.CreditCard, error) {
+	createdCC, err := ext.bus.Update(ctx, actorID, cc, ucc)
 	if err != nil {
 		return creditcardbus.CreditCard{}, err
 	}
@@ -76,15 +76,15 @@ func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, cc creditca
 		Message:   "credit card updated",
 	}
 
-	if _, err := ext.auditBus.Create(ctx, na); err != nil {
+	if _, err := ext.auditBus.Create(ctx, &na); err != nil {
 		return creditcardbus.CreditCard{}, err
 	}
 
-	return cc, nil
+	return createdCC, nil
 }
 
 // Delete applies auditing to the credit card deletion process.
-func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, cc creditcardbus.CreditCard) error {
+func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, cc *creditcardbus.CreditCard) error {
 	if err := ext.bus.Delete(ctx, actorID, cc); err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, cc creditca
 		Message:   "credit card deleted",
 	}
 
-	if _, err := ext.auditBus.Create(ctx, na); err != nil {
+	if _, err := ext.auditBus.Create(ctx, &na); err != nil {
 		return err
 	}
 
@@ -117,6 +117,6 @@ func (ext *Extension) Count(ctx context.Context, actorID uuid.UUID, filter credi
 }
 
 // QueryByID applies auditing to the credit card query by ID process.
-func (ext *Extension) QueryByID(ctx context.Context, actorID uuid.UUID, ccID uuid.UUID) (creditcardbus.CreditCard, error) {
+func (ext *Extension) QueryByID(ctx context.Context, actorID, ccID uuid.UUID) (creditcardbus.CreditCard, error) {
 	return ext.bus.QueryByID(ctx, actorID, ccID)
 }

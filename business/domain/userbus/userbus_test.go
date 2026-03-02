@@ -25,22 +25,22 @@ func Test_User(t *testing.T) {
 
 	db := dbtest.New(t, "Test_User")
 
-	sd, err := insertSeedData(db.BusDomain)
+	sd, err := insertSeedData(&db.BusDomain)
 	if err != nil {
 		t.Fatalf("Seeding error: %s", err)
 	}
 
 	// -------------------------------------------------------------------------
 
-	unittest.Run(t, query(db.BusDomain, sd), "query")
-	unittest.Run(t, create(db.BusDomain), "create")
-	unittest.Run(t, update(db.BusDomain, sd), "update")
-	unittest.Run(t, delete(db.BusDomain, sd), "delete")
+	unittest.Run(t, query(&db.BusDomain, sd), "query")
+	unittest.Run(t, create(&db.BusDomain), "create")
+	unittest.Run(t, update(&db.BusDomain, sd), "update")
+	unittest.Run(t, deleteRows(&db.BusDomain, sd), "delete")
 }
 
 // =============================================================================
 
-func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
+func insertSeedData(busDomain *dbtest.BusDomain) (unittest.SeedData, error) {
 	ctx := context.Background()
 
 	usrs, err := userbus.TestSeedUsers(ctx, 2, role.Admin, busDomain.User)
@@ -83,15 +83,15 @@ func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
 
 // =============================================================================
 
-func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func query(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	usrs := make([]userbus.User, 0, len(sd.Admins)+len(sd.Users))
 
-	for _, adm := range sd.Admins {
-		usrs = append(usrs, adm.User)
+	for i := range sd.Admins {
+		usrs = append(usrs, sd.Admins[i].User)
 	}
 
-	for _, usr := range sd.Users {
-		usrs = append(usrs, usr.User)
+	for i := range sd.Users {
+		usrs = append(usrs, sd.Users[i].User)
 	}
 
 	sort.Slice(usrs, func(i, j int) bool {
@@ -170,7 +170,7 @@ func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func create(busDomain dbtest.BusDomain) []unittest.Table {
+func create(busDomain *dbtest.BusDomain) []unittest.Table {
 	email, _ := mail.ParseAddress("dev@garnizehlabs.com")
 
 	table := []unittest.Table{
@@ -192,7 +192,7 @@ func create(busDomain dbtest.BusDomain) []unittest.Table {
 					Password:   password.MustParse("123"),
 				}
 
-				resp, err := busDomain.User.Create(ctx, uuid.UUID{}, nu)
+				resp, err := busDomain.User.Create(ctx, uuid.UUID{}, &nu)
 				if err != nil {
 					return err
 				}
@@ -224,7 +224,7 @@ func create(busDomain dbtest.BusDomain) []unittest.Table {
 	return table
 }
 
-func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func update(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	email, _ := mail.ParseAddress("jack@garnizehlabs.com")
 
 	table := []unittest.Table{
@@ -248,7 +248,7 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 					Password:   dbtest.PasswordPointer("1234"),
 				}
 
-				resp, err := busDomain.User.Update(ctx, uuid.UUID{}, sd.Users[0].User, uu)
+				resp, err := busDomain.User.Update(ctx, uuid.UUID{}, &sd.Users[0].User, uu)
 				if err != nil {
 					return err
 				}
@@ -278,13 +278,13 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func delete(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func deleteRows(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name:    "user",
 			ExpResp: nil,
 			ExcFunc: func(ctx context.Context) any {
-				if err := busDomain.User.Delete(ctx, uuid.UUID{}, sd.Users[1].User); err != nil {
+				if err := busDomain.User.Delete(ctx, uuid.UUID{}, &sd.Users[1].User); err != nil {
 					return err
 				}
 
@@ -298,7 +298,7 @@ func delete(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 			Name:    "admin",
 			ExpResp: nil,
 			ExcFunc: func(ctx context.Context) any {
-				if err := busDomain.User.Delete(ctx, uuid.UUID{}, sd.Admins[1].User); err != nil {
+				if err := busDomain.User.Delete(ctx, uuid.UUID{}, &sd.Admins[1].User); err != nil {
 					return err
 				}
 

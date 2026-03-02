@@ -7,7 +7,7 @@ import (
 	"github.com/garnizeh/fingo/business/domain/auditbus"
 )
 
-func toAppAudit(bus auditbus.Audit) auditapp.Audit {
+func toAppAudit(bus *auditbus.Audit) auditapp.Audit {
 	return auditapp.Audit{
 		ID:        bus.ID.String(),
 		ObjID:     bus.ObjID.String(),
@@ -23,8 +23,8 @@ func toAppAudit(bus auditbus.Audit) auditapp.Audit {
 
 func toAppAudits(audits []auditbus.Audit) []auditapp.Audit {
 	app := make([]auditapp.Audit, len(audits))
-	for i, adt := range audits {
-		app[i] = toAppAudit(adt)
+	for i := range audits {
+		app[i] = toAppAudit(&audits[i])
 	}
 
 	return app

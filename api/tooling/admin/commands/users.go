@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -15,12 +16,16 @@ import (
 )
 
 // Users retrieves all users from the database.
-func Users(log *logger.Logger, cfg sqldb.Config, pageNumber string, rowsPerPage string) error {
+func Users(log *logger.Logger, cfg *sqldb.Config, pageNumber, rowsPerPage string) (err error) {
 	db, err := sqldb.Open(cfg)
 	if err != nil {
 		return fmt.Errorf("connect database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing database: %w", cerr))
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

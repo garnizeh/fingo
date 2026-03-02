@@ -10,7 +10,6 @@ import (
 )
 
 func Test_Worker(t *testing.T) {
-
 	// Define a work function that waits to be canceled.
 	work := func(ctx context.Context) {
 		t.Logf("Goroutine running")
@@ -104,7 +103,7 @@ func Test_StopWorker(t *testing.T) {
 		t.Logf("Goroutine terminating")
 	}
 
-	var works []string
+	works := make([]string, 0, 4)
 
 	// Create a worker and start all 4 jobs.
 	w, err := worker.New(4)
@@ -127,7 +126,9 @@ func Test_StopWorker(t *testing.T) {
 
 	// Call Stop on all the jobs.
 	for _, work := range works {
-		w.Stop(work)
+		if err := w.Stop(work); err != nil {
+			t.Fatalf("Stop should not fail: %v", err)
+		}
 	}
 
 	// Wait for all the jobs to finish.

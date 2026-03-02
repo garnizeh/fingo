@@ -20,12 +20,12 @@ const (
 // Record represents the data that is being logged.
 type Record struct {
 	Time       time.Time
+	Attributes map[string]any
 	Message    string
 	Level      Level
-	Attributes map[string]any
 }
 
-func toRecord(r slog.Record) Record {
+func toRecord(r *slog.Record) Record {
 	atts := make(map[string]any, r.NumAttrs())
 
 	f := func(attr slog.Attr) bool {

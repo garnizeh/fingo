@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -42,8 +43,8 @@ var defaultClient = http.Client{
 // Client represents a client that can talk to the auth service.
 type Client struct {
 	log  *logger.Logger
-	url  string
 	http *http.Client
+	url  string
 }
 
 // New constructs an Auth that can be used to talk with the auth service.
@@ -86,7 +87,7 @@ func (cln *Client) Authenticate(ctx context.Context, authorization string) (auth
 }
 
 // Authorize calls the auth service to authorize the user.
-func (cln *Client) Authorize(ctx context.Context, auth authclient.Authorize) error {
+func (cln *Client) Authorize(ctx context.Context, auth *authclient.Authorize) error {
 	endpoint := fmt.Sprintf("%s/v1/auth/authorize", cln.url)
 
 	if err := cln.do(ctx, http.MethodPost, endpoint, nil, auth, nil); err != nil {
@@ -96,10 +97,11 @@ func (cln *Client) Authorize(ctx context.Context, auth authclient.Authorize) err
 	return nil
 }
 
-func (cln *Client) do(ctx context.Context, method string, endpoint string, headers map[string]string, body any, v any) error {
+func (cln *Client) do(ctx context.Context, method, endpoint string, headers map[string]string, body, v any) (err error) {
 	var statusCode int
+	var u *url.URL
 
-	u, err := url.Parse(endpoint)
+	u, err = url.Parse(endpoint)
 	if err != nil {
 		return fmt.Errorf("parsing endpoint: %w", err)
 	}
@@ -118,8 +120,8 @@ func (cln *Client) do(ctx context.Context, method string, endpoint string, heade
 
 	var b bytes.Buffer
 	if body != nil {
-		if err := json.NewEncoder(&b).Encode(body); err != nil {
-			return fmt.Errorf("encoding error: %w", err)
+		if nerr := json.NewEncoder(&b).Encode(body); nerr != nil {
+			return fmt.Errorf("encoding error: %w", nerr)
 		}
 	}
 
@@ -142,7 +144,12 @@ func (cln *Client) do(ctx context.Context, method string, endpoint string, heade
 	if err != nil {
 		return fmt.Errorf("do: error: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		cerr := resp.Body.Close()
+		if cerr != nil {
+			err = errors.Join(err, fmt.Errorf("close: %w", cerr))
+		}
+	}()
 
 	// Assign so it can be logged in the defer above.
 	statusCode = resp.StatusCode

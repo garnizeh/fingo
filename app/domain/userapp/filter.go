@@ -39,7 +39,7 @@ func parseQueryParams(r *http.Request) (queryParams, error) {
 	return filter, nil
 }
 
-func parseFilter(qp queryParams) (userbus.QueryFilter, error) {
+func (qp *queryParams) parseFilter() (userbus.QueryFilter, error) {
 	var fieldErrors errs.FieldErrors
 	var filter userbus.QueryFilter
 

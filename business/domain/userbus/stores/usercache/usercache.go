@@ -53,7 +53,7 @@ func (s *Store) NewWithTx(tx sqldb.CommitRollbacker) (userbus.Storer, error) {
 }
 
 // Create inserts a new user into the database.
-func (s *Store) Create(ctx context.Context, usr userbus.User) error {
+func (s *Store) Create(ctx context.Context, usr *userbus.User) error {
 	if err := s.storer.Create(ctx, usr); err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (s *Store) Create(ctx context.Context, usr userbus.User) error {
 }
 
 // Update replaces a user document in the database.
-func (s *Store) Update(ctx context.Context, usr userbus.User) error {
+func (s *Store) Update(ctx context.Context, usr *userbus.User) error {
 	if err := s.storer.Update(ctx, usr); err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (s *Store) Update(ctx context.Context, usr userbus.User) error {
 }
 
 // Delete removes a user from the database.
-func (s *Store) Delete(ctx context.Context, usr userbus.User) error {
+func (s *Store) Delete(ctx context.Context, usr *userbus.User) error {
 	if err := s.storer.Delete(ctx, usr); err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (s *Store) QueryByID(ctx context.Context, userID uuid.UUID) (userbus.User, 
 		return userbus.User{}, err
 	}
 
-	s.writeCache(usr)
+	s.writeCache(&usr)
 
 	return usr, nil
 }
@@ -124,7 +124,7 @@ func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (userbus.U
 		return userbus.User{}, err
 	}
 
-	s.writeCache(usr)
+	s.writeCache(&usr)
 
 	return usr, nil
 }
@@ -140,13 +140,13 @@ func (s *Store) readCache(key string) (userbus.User, bool) {
 }
 
 // writeCache performs a safe write to the cache for the specified userbus.
-func (s *Store) writeCache(bus userbus.User) {
-	s.cache.Set(bus.ID.String(), bus)
-	s.cache.Set(bus.Email.Address, bus)
+func (s *Store) writeCache(bus *userbus.User) {
+	s.cache.Set(bus.ID.String(), *bus)
+	s.cache.Set(bus.Email.Address, *bus)
 }
 
 // deleteCache performs a safe removal from the cache for the specified userbus.
-func (s *Store) deleteCache(bus userbus.User) {
+func (s *Store) deleteCache(bus *userbus.User) {
 	s.cache.Delete(bus.ID.String())
 	s.cache.Delete(bus.Email.Address)
 }

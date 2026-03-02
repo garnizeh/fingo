@@ -47,7 +47,10 @@ func (s *Store) NewWithTx(tx sqldb.CommitRollbacker) (homebus.Storer, error) {
 }
 
 // Create inserts a new home into the database.
-func (s *Store) Create(ctx context.Context, hme homebus.Home) error {
+func (s *Store) Create(ctx context.Context, hme *homebus.Home) error {
+	if hme == nil {
+		return fmt.Errorf("home is nil")
+	}
 	const q = `
     INSERT INTO homes
         (home_id, user_id, type, address_1, address_2, zip_code, city, state, country, date_created, date_updated)
@@ -62,7 +65,10 @@ func (s *Store) Create(ctx context.Context, hme homebus.Home) error {
 }
 
 // Delete removes a home from the database.
-func (s *Store) Delete(ctx context.Context, hme homebus.Home) error {
+func (s *Store) Delete(ctx context.Context, hme *homebus.Home) error {
+	if hme == nil {
+		return fmt.Errorf("home is nil")
+	}
 	data := struct {
 		ID string `db:"home_id"`
 	}{
@@ -83,7 +89,10 @@ func (s *Store) Delete(ctx context.Context, hme homebus.Home) error {
 }
 
 // Update replaces a home document in the database.
-func (s *Store) Update(ctx context.Context, hme homebus.Home) error {
+func (s *Store) Update(ctx context.Context, hme *homebus.Home) error {
+	if hme == nil {
+		return fmt.Errorf("home is nil")
+	}
 	const q = `
     UPDATE
         homes
@@ -131,8 +140,8 @@ func (s *Store) Query(ctx context.Context, filter homebus.QueryFilter, orderBy o
 	buf.WriteString(" OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY")
 
 	var dbHmes []homeDB
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dbHmes); err != nil {
-		return nil, fmt.Errorf("namedqueryslice: %w", err)
+	if nerr := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dbHmes); nerr != nil {
+		return nil, fmt.Errorf("namedqueryslice: %w", nerr)
 	}
 
 	hmes, err := toBusHomes(dbHmes)
@@ -190,7 +199,7 @@ func (s *Store) QueryByID(ctx context.Context, homeID uuid.UUID) (homebus.Home, 
 		return homebus.Home{}, fmt.Errorf("db: %w", err)
 	}
 
-	return toBusHome(dbHme)
+	return toBusHome(&dbHme)
 }
 
 // QueryByUserID gets the specified home from the database by user id.

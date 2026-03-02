@@ -16,9 +16,9 @@ import (
 )
 
 type app struct {
-	build string
 	log   *logger.Logger
 	db    *sqlx.DB
+	build string
 }
 
 func newApp(build string, log *logger.Logger, db *sqlx.DB) *app {
@@ -67,5 +67,5 @@ func (a *app) liveness(ctx context.Context, r *http.Request) web.Encoder {
 
 	// This handler provides a free timer loop.
 
-	return info
+	return &info
 }

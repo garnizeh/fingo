@@ -32,7 +32,7 @@ func Authenticate(client authclient.Authenticator) web.MidFunc {
 			}
 
 			ctx = setUserID(ctx, resp.UserID)
-			ctx = setClaims(ctx, resp.Claims)
+			ctx = setClaims(ctx, &resp.Claims)
 
 			return next(ctx, r)
 		}
@@ -78,7 +78,7 @@ func HandleAuthentication(ctx context.Context, ath *auth.Auth, authorizationHead
 	}
 
 	ctx = setUserID(ctx, subjectID)
-	ctx = setClaims(ctx, claims)
+	ctx = setClaims(ctx, &claims)
 
 	return ctx, nil
 }
@@ -134,12 +134,12 @@ func HandleAuthorization(ctx context.Context, authorizationHeader string, userBu
 	}
 
 	ctx = setUserID(ctx, subjectID)
-	ctx = setClaims(ctx, claims)
+	ctx = setClaims(ctx, &claims)
 
 	return ctx, nil
 }
 
-func parseBasicAuth(auth string) (string, string, bool) {
+func parseBasicAuth(auth string) (username, password string, ok bool) {
 	parts := strings.Split(auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return "", "", false
@@ -150,7 +150,7 @@ func parseBasicAuth(auth string) (string, string, bool) {
 		return "", "", false
 	}
 
-	username, password, ok := strings.Cut(string(c), ":")
+	username, password, ok = strings.Cut(string(c), ":")
 	if !ok {
 		return "", "", false
 	}

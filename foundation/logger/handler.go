@@ -40,26 +40,28 @@ func (h *logHandler) WithGroup(name string) slog.Handler {
 
 // Handle looks to see if an event function needs to be executed for a given
 // log level and then formats its argument Record.
+//
+//nolint:gocritic // slog.Handler interface requires this value parameter signature.
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 	switch r.Level {
 	case slog.LevelDebug:
 		if h.events.Debug != nil {
-			h.events.Debug(ctx, toRecord(r))
+			h.events.Debug(ctx, toRecord(&r))
 		}
 
 	case slog.LevelError:
 		if h.events.Error != nil {
-			h.events.Error(ctx, toRecord(r))
+			h.events.Error(ctx, toRecord(&r))
 		}
 
 	case slog.LevelWarn:
 		if h.events.Warn != nil {
-			h.events.Warn(ctx, toRecord(r))
+			h.events.Warn(ctx, toRecord(&r))
 		}
 
 	case slog.LevelInfo:
 		if h.events.Info != nil {
-			h.events.Info(ctx, toRecord(r))
+			h.events.Info(ctx, toRecord(&r))
 		}
 	}
 

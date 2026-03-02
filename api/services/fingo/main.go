@@ -78,7 +78,6 @@ func main() {
 }
 
 func run(ctx context.Context, log *logger.Logger) error {
-
 	// -------------------------------------------------------------------------
 	// GOMAXPROCS
 
@@ -87,16 +86,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// -------------------------------------------------------------------------
 	// Configuration
 
+	//nolint:govet // Configuration layout is intentionally organized for conf parsing clarity.
 	cfg := struct {
 		conf.Version
 		Web struct {
+			APIHost            string        `conf:"default:0.0.0.0:3000"`
+			DebugHost          string        `conf:"default:0.0.0.0:3010"`
+			CORSAllowedOrigins []string      `conf:"default:*"`
 			ReadTimeout        time.Duration `conf:"default:5s"`
 			WriteTimeout       time.Duration `conf:"default:10s"`
 			IdleTimeout        time.Duration `conf:"default:120s"`
 			ShutdownTimeout    time.Duration `conf:"default:20s"`
-			APIHost            string        `conf:"default:0.0.0.0:3000"`
-			DebugHost          string        `conf:"default:0.0.0.0:3010"`
-			CORSAllowedOrigins []string      `conf:"default:*"`
 		}
 		Auth struct {
 			Host      string `conf:"default:http://auth-service:6000"`
@@ -160,7 +160,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	log.Info(ctx, "startup", "status", "initializing database support", "hostport", cfg.DB.Host)
 
-	db, err := sqldb.Open(sqldb.Config{
+	dbcfg := sqldb.Config{
 		User:         cfg.DB.User,
 		Password:     cfg.DB.Password,
 		Host:         cfg.DB.Host,
@@ -168,12 +168,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 		MaxIdleConns: cfg.DB.MaxIdleConns,
 		MaxOpenConns: cfg.DB.MaxOpenConns,
 		DisableTLS:   cfg.DB.DisableTLS,
-	})
+	}
+	db, err := sqldb.Open(&dbcfg)
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
 	}
 
-	defer db.Close()
+	defer func() {
+		if errClose := db.Close(); errClose != nil {
+			log.Error(ctx, "db close", "err", errClose)
+		}
+	}()
 
 	// -------------------------------------------------------------------------
 	// Create Business Packages
@@ -224,7 +229,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 		return fmt.Errorf("failed to initialize authentication client: %w", err)
 	}
 
-	defer authClient.Close()
+	defer func() {
+		if errClose := authClient.Close(); errClose != nil {
+			log.Error(ctx, "authclient close", "err", errClose)
+		}
+	}()
 
 	// -------------------------------------------------------------------------
 	// Start Tracing Support
@@ -254,7 +263,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 	go func() {
 		log.Info(ctx, "startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
 
-		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.Mux()); err != nil {
+		srv := http.Server{
+			Addr:              cfg.Web.DebugHost,
+			Handler:           debug.Mux(),
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+
+		if err := srv.ListenAndServe(); err != nil {
 			log.Error(ctx, "shutdown", "status", "debug v1 router closed", "host", cfg.Web.DebugHost, "msg", err)
 		}
 	}()
@@ -285,11 +300,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		},
 	}
 
-	webAPI := mux.WebAPI(cfgMux,
-		build.Routes(),
-		mux.WithCORS(cfg.Web.CORSAllowedOrigins),
-		mux.WithFileServer(false, static, "static", "/"),
-	)
+	webAPI := mux.WebAPI(&cfgMux, build.Routes(), mux.WithCORS(cfg.Web.CORSAllowedOrigins), mux.WithFileServer(false, static, "static", "/"))
 
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
@@ -319,11 +330,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 		log.Info(ctx, "shutdown", "status", "shutdown started", "signal", sig)
 		defer log.Info(ctx, "shutdown", "status", "shutdown complete", "signal", sig)
 
-		ctx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
+		ctxTimeout, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
 		defer cancel()
 
-		if err := api.Shutdown(ctx); err != nil {
-			api.Close()
+		if err := api.Shutdown(ctxTimeout); err != nil {
+			if errClose := api.Close(); errClose != nil {
+				log.Error(ctx, "api close", "err", errClose)
+			}
 			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 	}

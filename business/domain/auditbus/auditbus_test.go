@@ -24,19 +24,19 @@ func Test_Audit(t *testing.T) {
 
 	db := dbtest.New(t, "Test_Audit")
 
-	sd, err := insertSeedData(db.BusDomain)
+	sd, err := insertSeedData(&db.BusDomain)
 	if err != nil {
 		t.Fatalf("Seeding error: %s", err)
 	}
 
 	// -------------------------------------------------------------------------
 
-	unittest.Run(t, query(db.BusDomain, sd), "query")
+	unittest.Run(t, query(&db.BusDomain, sd), "query")
 }
 
 // =============================================================================
 
-func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
+func insertSeedData(busDomain *dbtest.BusDomain) (unittest.SeedData, error) {
 	ctx := context.Background()
 
 	usrs, err := userbus.TestSeedUsers(ctx, 1, role.Admin, busDomain.User)
@@ -65,7 +65,7 @@ func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
 
 // =============================================================================
 
-func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func query(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	sort.Slice(sd.Admins[0].Audits, func(i, j int) bool {
 		return sd.Admins[0].Audits[i].ObjName.String() <= sd.Admins[0].Audits[j].ObjName.String()
 	})

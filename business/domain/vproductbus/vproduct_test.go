@@ -22,19 +22,19 @@ func Test_VProduct(t *testing.T) {
 
 	db := dbtest.New(t, "Test_Product")
 
-	sd, err := insertSeedData(db.BusDomain)
+	sd, err := insertSeedData(&db.BusDomain)
 	if err != nil {
 		t.Fatalf("Seeding error: %s", err)
 	}
 
 	// -------------------------------------------------------------------------
 
-	unittest.Run(t, query(db.BusDomain, sd), "query")
+	unittest.Run(t, query(&db.BusDomain, sd), "query")
 }
 
 // =============================================================================
 
-func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
+func insertSeedData(busDomain *dbtest.BusDomain) (unittest.SeedData, error) {
 	ctx := context.Background()
 
 	usrs, err := userbus.TestSeedUsers(ctx, 1, role.User, busDomain.User)
@@ -81,7 +81,7 @@ func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
 
 // =============================================================================
 
-func toVProduct(usr userbus.User, prd productbus.Product) vproductbus.Product {
+func toVProduct(usr *userbus.User, prd *productbus.Product) vproductbus.Product {
 	return vproductbus.Product{
 		ID:          prd.ID,
 		UserID:      prd.UserID,
@@ -94,10 +94,10 @@ func toVProduct(usr userbus.User, prd productbus.Product) vproductbus.Product {
 	}
 }
 
-func toVProducts(usr userbus.User, prds []productbus.Product) []vproductbus.Product {
+func toVProducts(usr *userbus.User, prds []productbus.Product) []vproductbus.Product {
 	items := make([]vproductbus.Product, len(prds))
-	for i, prd := range prds {
-		items[i] = toVProduct(usr, prd)
+	for i := range prds {
+		items[i] = toVProduct(usr, &prds[i])
 	}
 
 	return items
@@ -105,9 +105,9 @@ func toVProducts(usr userbus.User, prds []productbus.Product) []vproductbus.Prod
 
 // =============================================================================
 
-func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
-	prds := toVProducts(sd.Admins[0].User, sd.Admins[0].Products)
-	prds = append(prds, toVProducts(sd.Users[0].User, sd.Users[0].Products)...)
+func query(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+	prds := toVProducts(&sd.Admins[0].User, sd.Admins[0].Products)
+	prds = append(prds, toVProducts(&sd.Users[0].User, sd.Users[0].Products)...)
 
 	sort.Slice(prds, func(i, j int) bool {
 		return prds[i].ID.String() <= prds[j].ID.String()

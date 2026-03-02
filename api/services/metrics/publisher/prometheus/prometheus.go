@@ -15,13 +15,13 @@ import (
 // Exporter implements the prometheus exporter support.
 type Exporter struct {
 	log    *logger.Logger
-	server http.Server
 	data   map[string]any
+	server http.Server
 	mu     sync.Mutex
 }
 
 // New constructs an Exporter for use.
-func New(log *logger.Logger, host string, route string, readTimeout, writeTimeout time.Duration, idleTimeout time.Duration) *Exporter {
+func New(log *logger.Logger, host, route string, readTimeout, writeTimeout, idleTimeout time.Duration) *Exporter {
 	mux := http.NewServeMux()
 
 	exp := Exporter{
@@ -84,9 +84,7 @@ func (exp *Exporter) handler(w http.ResponseWriter, r *http.Request) {
 
 	var data map[string]any
 	exp.mu.Lock()
-	{
-		data = deepCopyMap(exp.data)
-	}
+	data = deepCopyMap(exp.data)
 	exp.mu.Unlock()
 
 	out(w, "", data)
@@ -129,7 +127,9 @@ func out(w io.Writer, prefix string, data map[string]any) {
 
 		switch vm := v.(type) {
 		case float64:
-			fmt.Fprintf(w, "%s %.f\n", writeKey, vm)
+			if _, err := fmt.Fprintf(w, "%s %.f\n", writeKey, vm); err != nil {
+				fmt.Fprintf(io.Discard, "prometheus write failed: %v\n", err)
+			}
 
 		case map[string]any:
 			out(w, writeKey, vm)

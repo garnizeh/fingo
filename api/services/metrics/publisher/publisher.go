@@ -29,12 +29,12 @@ type Publisher func(map[string]any)
 // Publish provides the ability to receive metrics
 // on an interval.
 type Publish struct {
-	log       *logger.Logger
 	collector Collector
-	publisher []Publisher
-	wg        sync.WaitGroup
+	log       *logger.Logger
 	timer     *time.Timer
 	shutdown  chan struct{}
+	publisher []Publisher
+	wg        sync.WaitGroup
 }
 
 // New creates a Publish for consuming and publishing metrics.
@@ -102,7 +102,7 @@ func (s *Stdout) Publish(data map[string]any) {
 	}
 
 	var d map[string]any
-	if err := json.Unmarshal(rawJSON, &d); err != nil {
+	if err = json.Unmarshal(rawJSON, &d); err != nil {
 		s.log.Error(ctx, "stdout", "status", "unmarshal data", "err", err)
 		return
 	}

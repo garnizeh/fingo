@@ -51,7 +51,7 @@ func MustParse(value string) Password {
 	return password
 }
 
-func ParseConfirm(pass string, confirm string) (Password, error) {
+func ParseConfirm(pass, confirm string) (Password, error) {
 	p, err := Parse(pass)
 	if err != nil {
 		return Password{}, err
@@ -64,7 +64,7 @@ func ParseConfirm(pass string, confirm string) (Password, error) {
 	return p, nil
 }
 
-func ParseConfirmPointers(pass *string, confirm *string) (Password, error) {
+func ParseConfirmPointers(pass, confirm *string) (Password, error) {
 	if pass == nil || confirm == nil {
 		return Password{}, fmt.Errorf("passwords do not match")
 	}

@@ -16,12 +16,12 @@ import (
 func query200(sd apitest.SeedData) []apitest.Table {
 	usrs := make([]userbus.User, 0, len(sd.Admins)+len(sd.Users))
 
-	for _, adm := range sd.Admins {
-		usrs = append(usrs, adm.User)
+	for i := range sd.Admins {
+		usrs = append(usrs, sd.Admins[i].User)
 	}
 
-	for _, usr := range sd.Users {
-		usrs = append(usrs, usr.User)
+	for i := range sd.Users {
+		usrs = append(usrs, sd.Users[i].User)
 	}
 
 	sort.Slice(usrs, func(i, j int) bool {
@@ -91,7 +91,7 @@ func queryByID200(sd apitest.SeedData) []apitest.Table {
 			StatusCode: http.StatusOK,
 			Method:     http.MethodGet,
 			GotResp:    &userapp.User{},
-			ExpResp:    toAppUserPtr(sd.Users[0].User),
+			ExpResp:    toAppUserPtr(&sd.Users[0].User),
 			CmpFunc: func(got any, exp any) string {
 				return cmp.Diff(got, exp)
 			},

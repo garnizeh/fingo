@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/mail"
@@ -19,8 +20,8 @@ import (
 )
 
 type testOption struct {
-	skip    bool
 	skipMsg string
+	skip    bool
 }
 
 type OptionFunc func(*testOption)
@@ -51,9 +52,10 @@ func (at *Test) Run(t *testing.T, table []Table, testName string, options ...Opt
 		t.Skipf("%v: %v", testName, to.skipMsg)
 	}
 
-	for _, tt := range table {
+	for i := range table {
+		tt := &table[i]
 		f := func(t *testing.T) {
-			r := httptest.NewRequest(tt.Method, tt.URL, nil)
+			var body io.Reader = http.NoBody
 			w := httptest.NewRecorder()
 
 			if tt.Input != nil {
@@ -62,8 +64,10 @@ func (at *Test) Run(t *testing.T, table []Table, testName string, options ...Opt
 					t.Fatalf("Should be able to marshal the model : %s", err)
 				}
 
-				r = httptest.NewRequest(tt.Method, tt.URL, bytes.NewBuffer(d))
+				body = bytes.NewBuffer(d)
 			}
+
+			r := httptest.NewRequest(tt.Method, tt.URL, body)
 
 			r.Header.Set("Authorization", "Bearer "+tt.Token)
 			at.mux.ServeHTTP(w, r)
@@ -100,7 +104,10 @@ func (at *Test) Run(t *testing.T, table []Table, testName string, options ...Opt
 
 // Token generates an authenticated token for a user.
 func Token(userBus userbus.ExtBusiness, ath *auth.Auth, email string) string {
-	addr, _ := mail.ParseAddress(email)
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return ""
+	}
 
 	dbUsr, err := userBus.QueryByEmail(context.Background(), *addr)
 	if err != nil {
@@ -117,7 +124,7 @@ func Token(userBus userbus.ExtBusiness, ath *auth.Auth, email string) string {
 		Roles: role.ParseToString(dbUsr.Roles),
 	}
 
-	token, err := ath.GenerateToken(kid, claims)
+	token, err := ath.GenerateToken(kid, &claims)
 	if err != nil {
 		return ""
 	}

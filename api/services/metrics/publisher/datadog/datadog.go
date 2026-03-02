@@ -4,6 +4,7 @@ package datadog
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +23,7 @@ type Datadog struct {
 }
 
 // New initializes Datadog access for publishing metrics.
-func New(log *log.Logger, apiKey string, host string) *Datadog {
+func New(log *log.Logger, apiKey, host string) *Datadog {
 	tr := http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -137,7 +138,7 @@ func marshalDatadog(log *log.Logger, data map[string]any) ([]byte, error) {
 }
 
 // sendDatadog sends data to the datadog servers.
-func sendDatadog(d *Datadog, data []byte) error {
+func sendDatadog(d *Datadog, data []byte) (err error) {
 	url := fmt.Sprintf("%s?api_key=%s", d.host, d.apiKey)
 	b := bytes.NewBuffer(data)
 
@@ -150,7 +151,11 @@ func sendDatadog(d *Datadog, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing response body: %w", cerr))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusAccepted {
 		out, err := io.ReadAll(resp.Body)

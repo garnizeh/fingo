@@ -60,8 +60,8 @@ func (s *Store) Query(ctx context.Context, filter vproductbus.QueryFilter, order
 	buf.WriteString(" OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY")
 
 	var dnPrd []productDB
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dnPrd); err != nil {
-		return nil, fmt.Errorf("namedqueryslice: %w", err)
+	if errShadow := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dnPrd); errShadow != nil {
+		return nil, fmt.Errorf("namedqueryslice: %w", errShadow)
 	}
 
 	prd, err := toBusProducts(dnPrd)

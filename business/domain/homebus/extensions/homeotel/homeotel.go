@@ -33,7 +33,7 @@ func (ext *Extension) NewWithTx(tx sqldb.CommitRollbacker) (homebus.ExtBusiness,
 }
 
 // Create applies otel to the home creation process.
-func (ext *Extension) Create(ctx context.Context, nh homebus.NewHome) (homebus.Home, error) {
+func (ext *Extension) Create(ctx context.Context, nh *homebus.NewHome) (homebus.Home, error) {
 	ctx, span := otel.AddSpan(ctx, "business.homebus.create")
 	defer span.End()
 
@@ -46,7 +46,7 @@ func (ext *Extension) Create(ctx context.Context, nh homebus.NewHome) (homebus.H
 }
 
 // Update applies otel to the home update process.
-func (ext *Extension) Update(ctx context.Context, hme homebus.Home, uh homebus.UpdateHome) (homebus.Home, error) {
+func (ext *Extension) Update(ctx context.Context, hme *homebus.Home, uh homebus.UpdateHome) (homebus.Home, error) {
 	ctx, span := otel.AddSpan(ctx, "business.homebus.update")
 	defer span.End()
 
@@ -59,7 +59,7 @@ func (ext *Extension) Update(ctx context.Context, hme homebus.Home, uh homebus.U
 }
 
 // Delete applies otel to the home delete process.
-func (ext *Extension) Delete(ctx context.Context, hme homebus.Home) error {
+func (ext *Extension) Delete(ctx context.Context, hme *homebus.Home) error {
 	ctx, span := otel.AddSpan(ctx, "business.homebus.delete")
 	defer span.End()
 

@@ -46,7 +46,7 @@ func (s *Store) NewWithTx(tx sqldb.CommitRollbacker) (creditcardbus.Storer, erro
 }
 
 // Create adds a CreditCard to the sqldb.
-func (s *Store) Create(ctx context.Context, cc creditcardbus.CreditCard) error {
+func (s *Store) Create(ctx context.Context, cc *creditcardbus.CreditCard) error {
 	const q = `
 	INSERT INTO credit_cards
 		(credit_card_id, user_id, name, card_limit, closing_day, due_day, last_four_digits, enabled, date_created, date_updated)
@@ -61,7 +61,7 @@ func (s *Store) Create(ctx context.Context, cc creditcardbus.CreditCard) error {
 }
 
 // Update modifies data about a CreditCard.
-func (s *Store) Update(ctx context.Context, cc creditcardbus.CreditCard) error {
+func (s *Store) Update(ctx context.Context, cc *creditcardbus.CreditCard) error {
 	const q = `
 	UPDATE
 		credit_cards
@@ -83,7 +83,7 @@ func (s *Store) Update(ctx context.Context, cc creditcardbus.CreditCard) error {
 }
 
 // Delete removes the credit card identified by a given ID.
-func (s *Store) Delete(ctx context.Context, cc creditcardbus.CreditCard) error {
+func (s *Store) Delete(ctx context.Context, cc *creditcardbus.CreditCard) error {
 	const q = `
 	DELETE FROM
 		credit_cards
@@ -176,7 +176,7 @@ func (s *Store) QueryByID(ctx context.Context, ccID uuid.UUID) (creditcardbus.Cr
 		return creditcardbus.CreditCard{}, fmt.Errorf("namedquerystruct: %w", err)
 	}
 
-	bus, err := toBusCreditCard(dbCC)
+	bus, err := toBusCreditCard(&dbCC)
 	if err != nil {
 		return creditcardbus.CreditCard{}, fmt.Errorf("toBusCreditCard: %w", err)
 	}

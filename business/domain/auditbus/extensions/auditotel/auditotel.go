@@ -26,7 +26,7 @@ func NewExtension() auditbus.Extension {
 }
 
 // Create adds a new audit record to the system.
-func (ext *Extension) Create(ctx context.Context, na auditbus.NewAudit) (auditbus.Audit, error) {
+func (ext *Extension) Create(ctx context.Context, na *auditbus.NewAudit) (auditbus.Audit, error) {
 	ctx, span := otel.AddSpan(ctx, "business.auditbus.create")
 	defer span.End()
 

@@ -46,20 +46,20 @@ func (ext *Extension) Create(ctx context.Context, actorID uuid.UUID, ncc creditc
 }
 
 // Update applies otel to the credit card update process.
-func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, cc creditcardbus.CreditCard, ucc creditcardbus.UpdateCreditCard) (creditcardbus.CreditCard, error) {
+func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, cc *creditcardbus.CreditCard, ucc creditcardbus.UpdateCreditCard) (creditcardbus.CreditCard, error) {
 	ctx, span := otel.AddSpan(ctx, "business.creditcardbus.update")
 	defer span.End()
 
-	cc, err := ext.bus.Update(ctx, actorID, cc, ucc)
+	updatedCC, err := ext.bus.Update(ctx, actorID, cc, ucc)
 	if err != nil {
 		return creditcardbus.CreditCard{}, err
 	}
 
-	return cc, nil
+	return updatedCC, nil
 }
 
 // Delete applies otel to the credit card deletion process.
-func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, cc creditcardbus.CreditCard) error {
+func (ext *Extension) Delete(ctx context.Context, actorID uuid.UUID, cc *creditcardbus.CreditCard) error {
 	ctx, span := otel.AddSpan(ctx, "business.creditcardbus.delete")
 	defer span.End()
 
@@ -87,7 +87,7 @@ func (ext *Extension) Count(ctx context.Context, actorID uuid.UUID, filter credi
 }
 
 // QueryByID applies otel to the credit card query by ID process.
-func (ext *Extension) QueryByID(ctx context.Context, actorID uuid.UUID, ccID uuid.UUID) (creditcardbus.CreditCard, error) {
+func (ext *Extension) QueryByID(ctx context.Context, actorID, ccID uuid.UUID) (creditcardbus.CreditCard, error) {
 	ctx, span := otel.AddSpan(ctx, "business.creditcardbus.querybyid")
 	defer span.End()
 

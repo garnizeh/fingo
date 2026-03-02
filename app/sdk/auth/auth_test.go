@@ -44,7 +44,7 @@ func test1(ath *auth.Auth) func(t *testing.T) {
 			Roles: []string{role.Admin.String()},
 		}
 
-		token, err := ath.GenerateToken(kid, claims)
+		token, err := ath.GenerateToken(kid, &claims)
 		if err != nil {
 			t.Fatalf("Should be able to generate a JWT : %s", err)
 		}
@@ -56,17 +56,17 @@ func test1(ath *auth.Auth) func(t *testing.T) {
 
 		userID := uuid.MustParse(claims.Subject)
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAdminOnly)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAdminOnly)
 		if err != nil {
 			t.Errorf("Should be able to authorize the Roles.Admin claims : %s", err)
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleUserOnly)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleUserOnly)
 		if err == nil {
 			t.Error("Should NOT be able to authorize the Roles.User claim")
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAdminOrSubject)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAdminOrSubject)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleAdminOrSubject claim with Roles.Admin only : %s", err)
 		}
@@ -87,7 +87,7 @@ func test2(ath *auth.Auth) func(t *testing.T) {
 			Roles: []string{role.User.String()},
 		}
 
-		token, err := ath.GenerateToken(kid, claims)
+		token, err := ath.GenerateToken(kid, &claims)
 		if err != nil {
 			t.Fatalf("Should be able to generate a JWT : %v", err)
 		}
@@ -99,22 +99,22 @@ func test2(ath *auth.Auth) func(t *testing.T) {
 
 		userID := uuid.MustParse(claims.Subject)
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleUserOnly)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleUserOnly)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleUserOnly claim with Roles.User only : %s", err)
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAdminOnly)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAdminOnly)
 		if err == nil {
 			t.Error("Should NOT be able to authorize the RuleAdminOnly claim with Roles.User only")
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAdminOrSubject)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAdminOrSubject)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleAdminOrSubject claim with Roles.User only : %s", err)
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAny)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAny)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleAny any claim with Roles.User only : %s", err)
 		}
@@ -135,7 +135,7 @@ func test3(ath *auth.Auth) func(t *testing.T) {
 			Roles: []string{role.User.String()},
 		}
 
-		token, err := ath.GenerateToken(kid, claims)
+		token, err := ath.GenerateToken(kid, &claims)
 		if err != nil {
 			t.Fatalf("Should be able to generate a JWT : %s", err)
 		}
@@ -147,7 +147,7 @@ func test3(ath *auth.Auth) func(t *testing.T) {
 
 		userID := uuid.MustParse("9e979baa-61c9-4b50-81f2-f216d53f5c15")
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAdminOrSubject)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAdminOrSubject)
 		if err == nil {
 			t.Error("Should NOT be able to authorize the RuleAdminOrSubject claim with Roles.User only and different userID")
 		}
@@ -169,7 +169,7 @@ func test4(ath *auth.Auth) func(t *testing.T) {
 		}
 		userID := uuid.MustParse("9e979baa-61c9-4b50-81f2-f216d53f5c15")
 
-		token, err := ath.GenerateToken(kid, claims)
+		token, err := ath.GenerateToken(kid, &claims)
 		if err != nil {
 			t.Fatalf("Should be able to generate a JWT : %s", err)
 		}
@@ -179,7 +179,7 @@ func test4(ath *auth.Auth) func(t *testing.T) {
 			t.Fatalf("Should be able to authenticate the claims : %s", err)
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAny)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAny)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleAny any claim with Roles.User and Roles.Admin : %s", err)
 		}
@@ -201,7 +201,7 @@ func test5(ath *auth.Auth) func(t *testing.T) {
 		}
 		userID := uuid.MustParse("9e979baa-61c9-4b50-81f2-f216d53f5c15")
 
-		token, err := ath.GenerateToken(kid, claims)
+		token, err := ath.GenerateToken(kid, &claims)
 		if err != nil {
 			t.Fatalf("Should be able to generate a JWT : %s", err)
 		}
@@ -211,7 +211,7 @@ func test5(ath *auth.Auth) func(t *testing.T) {
 			t.Fatalf("Should be able to authenticate the claims : %s", err)
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAny)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAny)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleAny any claim with Roles.User only : %s", err)
 		}
@@ -233,7 +233,7 @@ func test6(ath *auth.Auth) func(t *testing.T) {
 		}
 		userID := uuid.MustParse("9e979baa-61c9-4b50-81f2-f216d53f5c15")
 
-		token, err := ath.GenerateToken(kid, claims)
+		token, err := ath.GenerateToken(kid, &claims)
 		if err != nil {
 			t.Fatalf("Should be able to generate a JWT : %s", err)
 		}
@@ -243,7 +243,7 @@ func test6(ath *auth.Auth) func(t *testing.T) {
 			t.Fatalf("Should be able to authenticate the claims : %s", err)
 		}
 
-		err = ath.Authorize(context.Background(), parsedClaims, userID, auth.RuleAny)
+		err = ath.Authorize(context.Background(), &parsedClaims, userID, auth.RuleAny)
 		if err != nil {
 			t.Errorf("Should be able to authorize the RuleAny any claim with Roles.Admin only : %s", err)
 		}

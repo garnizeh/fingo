@@ -3,6 +3,7 @@ package debug
 
 import (
 	"expvar"
+	"log"
 	"net/http"
 	"net/http/pprof"
 
@@ -23,7 +24,9 @@ func Mux() *http.ServeMux {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	mux.Handle("/debug/vars/", expvar.Handler())
 
-	statsviz.Register(mux)
+	if err := statsviz.Register(mux); err != nil {
+		log.Println("statsviz register: ", err)
+	}
 
 	return mux
 }

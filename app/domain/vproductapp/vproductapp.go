@@ -31,9 +31,12 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("page", err)
 	}
 
-	filter, err := parseFilter(qp)
+	filter, err := qp.parseFilter()
 	if err != nil {
-		return err.(*errs.Error)
+		if enc, ok := err.(web.Encoder); ok {
+			return enc
+		}
+		return errs.New(errs.Internal, err)
 	}
 
 	orderBy, err := order.Parse(orderByFields, qp.OrderBy, vproductbus.DefaultOrderBy)

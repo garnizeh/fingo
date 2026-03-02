@@ -8,7 +8,7 @@ import (
 	"github.com/garnizeh/fingo/business/types/role"
 )
 
-func toAppUser(bus userbus.User) userapp.User {
+func toAppUser(bus *userbus.User) userapp.User {
 	return userapp.User{
 		ID:          bus.ID.String(),
 		Name:        bus.Name.String(),
@@ -23,14 +23,14 @@ func toAppUser(bus userbus.User) userapp.User {
 
 func toAppUsers(users []userbus.User) []userapp.User {
 	items := make([]userapp.User, len(users))
-	for i, usr := range users {
-		items[i] = toAppUser(usr)
+	for i := range users {
+		items[i] = toAppUser(&users[i])
 	}
 
 	return items
 }
 
-func toAppUserPtr(bus userbus.User) *userapp.User {
+func toAppUserPtr(bus *userbus.User) *userapp.User {
 	appUsr := toAppUser(bus)
 	return &appUsr
 }

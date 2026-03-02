@@ -14,18 +14,18 @@ import (
 )
 
 type userDB struct {
-	ID           uuid.UUID      `db:"user_id"`
+	DateCreated  time.Time      `db:"date_created"`
+	DateUpdated  time.Time      `db:"date_updated"`
 	Name         string         `db:"name"`
 	Email        string         `db:"email"`
 	Roles        dbarray.String `db:"roles"`
 	PasswordHash []byte         `db:"password_hash"`
 	Department   sql.NullString `db:"department"`
+	ID           uuid.UUID      `db:"user_id"`
 	Enabled      bool           `db:"enabled"`
-	DateCreated  time.Time      `db:"date_created"`
-	DateUpdated  time.Time      `db:"date_updated"`
 }
 
-func toDBUser(bus userbus.User) userDB {
+func toDBUser(bus *userbus.User) userDB {
 	return userDB{
 		ID:           bus.ID,
 		Name:         bus.Name.String(),
@@ -39,7 +39,7 @@ func toDBUser(bus userbus.User) userDB {
 	}
 }
 
-func toBusUser(db userDB) (userbus.User, error) {
+func toBusUser(db *userDB) (userbus.User, error) {
 	addr := mail.Address{
 		Address: db.Email,
 	}
@@ -77,9 +77,9 @@ func toBusUser(db userDB) (userbus.User, error) {
 func toBusUsers(dbs []userDB) ([]userbus.User, error) {
 	bus := make([]userbus.User, len(dbs))
 
-	for i, db := range dbs {
+	for i := range dbs {
 		var err error
-		bus[i], err = toBusUser(db)
+		bus[i], err = toBusUser(&dbs[i])
 		if err != nil {
 			return nil, err
 		}

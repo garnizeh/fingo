@@ -67,7 +67,6 @@ func NewApp(log Logger, tracer trace.Tracer, mw ...MidFunc) *App {
 // application traffic. This was set up in the NewApp function.
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if a.origins != nil {
-
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin
 		//
@@ -113,7 +112,7 @@ func (a *App) EnableCORS(origins []string) {
 // HandlerFuncNoMid sets a handler function for a given HTTP method and path
 // pair to the application server mux. Does not include the application
 // middleware or OTEL tracing.
-func (a *App) HandlerFuncNoMid(method string, group string, path string, handlerFunc HandlerFunc) {
+func (a *App) HandlerFuncNoMid(method, group, path string, handlerFunc HandlerFunc) {
 	h := func(w http.ResponseWriter, r *http.Request) {
 		ctx := setWriter(r.Context(), w)
 
@@ -136,7 +135,7 @@ func (a *App) HandlerFuncNoMid(method string, group string, path string, handler
 
 // HandlerFunc sets a handler function for a given HTTP method and path pair
 // to the application server mux.
-func (a *App) HandlerFunc(method string, group string, path string, handlerFunc HandlerFunc, mw ...MidFunc) {
+func (a *App) HandlerFunc(method, group, path string, handlerFunc HandlerFunc, mw ...MidFunc) {
 	handlerFunc = wrapMiddleware(mw, handlerFunc)
 	handlerFunc = wrapMiddleware(a.mw, handlerFunc)
 
@@ -165,7 +164,7 @@ func (a *App) HandlerFunc(method string, group string, path string, handlerFunc 
 
 // RawHandlerFunc sets a raw handler function for a given HTTP method and path
 // pair to the application server mux.
-func (a *App) RawHandlerFunc(method string, group string, path string, rawHandlerFunc http.HandlerFunc, mw ...MidFunc) {
+func (a *App) RawHandlerFunc(method, group, path string, rawHandlerFunc http.HandlerFunc, mw ...MidFunc) {
 	handlerFunc := func(ctx context.Context, r *http.Request) Encoder {
 		r = r.WithContext(ctx)
 		rawHandlerFunc(GetWriter(ctx), r)
@@ -195,7 +194,7 @@ func (a *App) RawHandlerFunc(method string, group string, path string, rawHandle
 
 // FileServerReact starts a file server based on the specified file system and
 // directory inside that file system for a statically built react webapp.
-func (a *App) FileServerReact(static embed.FS, dir string, path string) error {
+func (a *App) FileServerReact(static embed.FS, dir, path string) error {
 	fileMatcher := regexp.MustCompile(`\.[a-zA-Z]*$`)
 
 	fSys, err := fs.Sub(static, dir)
@@ -215,7 +214,9 @@ func (a *App) FileServerReact(static embed.FS, dir string, path string) error {
 			}
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write(p)
+			if _, err := w.Write(p); err != nil {
+				a.log(r.Context(), "FileServerReact", "err", err)
+			}
 			return
 		}
 
@@ -229,7 +230,7 @@ func (a *App) FileServerReact(static embed.FS, dir string, path string) error {
 
 // FileServer starts a file server based on the specified file system and
 // directory inside that file system.
-func (a *App) FileServer(static embed.FS, dir string, path string) error {
+func (a *App) FileServer(static embed.FS, dir, path string) error {
 	fSys, err := fs.Sub(static, dir)
 	if err != nil {
 		return fmt.Errorf("switching to static folder: %w", err)

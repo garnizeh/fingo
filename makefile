@@ -411,13 +411,6 @@ statsviz:
 # ==============================================================================
 # Running tests within the local computer
 
-test-up:
-	docker run -P -d --name fingotest -e POSTGRES_PASSWORD=postgres postgres:18.2
-
-test-down:
-	docker stop fingotest
-	docker rm fingotest -v
-
 test-r:
 	CGO_ENABLED=1 go test -race -count=1 ./...
 
@@ -434,6 +427,51 @@ vuln-check:
 test: test-only lint vuln-check
 
 test-race: test-r lint vuln-check
+
+.PHONY: ci ci-up ci-down
+
+# ci: run the full CI locally (starts a Postgres container, runs checks, then tears down)
+ci: ci-up
+
+ci-up:
+	@echo "Starting local Postgres (fingotest)..."
+	-docker run -d --name fingotest -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:18.2
+	@echo "Waiting for Postgres to become ready..."
+	@until docker exec fingotest pg_isready -U postgres >/dev/null 2>&1; do \
+		echo -n '.'; sleep 1; \
+	done; \
+	echo '\nPostgres ready.'
+
+ci-down:
+	@echo "Stopping local Postgres (fingotest)..."
+	-docker stop fingotest >/dev/null 2>&1 || true
+	-docker rm fingotest -v >/dev/null 2>&1 || true
+
+# Run the same checks as the GitHub Actions CI
+
+ci-run: ci-up
+	@echo "Running CI steps (will teardown on exit)..."
+	@bash -e -o pipefail -c ' \
+		trap "$(MAKE) ci-down" EXIT; \
+		set -e; \
+		echo "Running tests..."; \
+		CGO_ENABLED=0 go test ./...; \
+		echo "Running vet..."; \
+		CGO_ENABLED=0 go vet ./...; \
+		echo "Running staticcheck..."; \
+		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+		staticcheck -checks=all ./...; \
+		echo "Running golangci-lint..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		golangci-lint run --timeout 5m ./...; \
+		echo "Running gosec..."; \
+		go install github.com/securego/gosec/v2/cmd/gosec@latest; \
+		gosec ./...; \
+		echo "Running govulncheck..."; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+		govulncheck ./...; \
+	'
+
 
 # ==============================================================================
 # Hitting endpoints

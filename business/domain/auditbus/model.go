@@ -11,24 +11,24 @@ import (
 
 // Audit represents information about an individual audit record.
 type Audit struct {
-	ID        uuid.UUID
-	ObjID     uuid.UUID
+	Timestamp time.Time
 	ObjDomain domain.Domain
 	ObjName   name.Name
-	ActorID   uuid.UUID
 	Action    string
-	Data      json.RawMessage
 	Message   string
-	Timestamp time.Time
+	Data      json.RawMessage
+	ID        uuid.UUID
+	ObjID     uuid.UUID
+	ActorID   uuid.UUID
 }
 
 // NewAudit represents the information needed to create a new audit record.
 type NewAudit struct {
-	ObjID     uuid.UUID
+	Data      any
 	ObjDomain domain.Domain
 	ObjName   name.Name
-	ActorID   uuid.UUID
 	Action    string
-	Data      any
 	Message   string
+	ObjID     uuid.UUID
+	ActorID   uuid.UUID
 }

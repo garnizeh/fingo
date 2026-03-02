@@ -1,3 +1,4 @@
+// Package creditcardapp maintains the app layer api for the credit card domain.
 package creditcardapp
 
 import (
@@ -45,7 +46,7 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "create: cc[%+v]: %s", busNCC, err)
 	}
 
-	return toAppCreditCard(cc)
+	return toAppCreditCard(&cc)
 }
 
 func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
@@ -74,12 +75,12 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "querybyid: ccID[%s]: %s", ccID, err)
 	}
 
-	updated, err := a.creditCardBus.Update(ctx, actorID, cc, busUCC)
+	updated, err := a.creditCardBus.Update(ctx, actorID, &cc, busUCC)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "update: ccID[%s] ucc[%+v]: %s", ccID, ucc, err)
 	}
 
-	return toAppCreditCard(updated)
+	return toAppCreditCard(&updated)
 }
 
 func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
@@ -98,7 +99,7 @@ func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "querybyid: ccID[%s]: %s", ccID, err)
 	}
 
-	if err := a.creditCardBus.Delete(ctx, actorID, cc); err != nil {
+	if err := a.creditCardBus.Delete(ctx, actorID, &cc); err != nil {
 		return errs.Errorf(errs.Internal, "delete: ccID[%s]: %s", ccID, err)
 	}
 
@@ -108,9 +109,12 @@ func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
 func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	qp := parseQueryParams(r)
 
-	filter, err := parseFilter(qp)
+	filter, err := qp.parseFilter()
 	if err != nil {
-		return errs.New(errs.InvalidArgument, err)
+		if enc, ok := err.(web.Encoder); ok {
+			return enc
+		}
+		return errs.New(errs.Internal, err)
 	}
 
 	orderBy, err := order.Parse(orderByFields, qp.OrderBy, creditcardbus.DefaultOrderBy)
@@ -158,5 +162,5 @@ func (a *app) queryByID(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "querybyid: ccID[%s]: %s", ccID, err)
 	}
 
-	return toAppCreditCard(cc)
+	return toAppCreditCard(&cc)
 }

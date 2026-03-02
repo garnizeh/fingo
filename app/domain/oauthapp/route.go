@@ -21,7 +21,7 @@ type Config struct {
 }
 
 // Routes adds the routes for the auth app.
-func Routes(app *web.App, cfg Config) {
+func Routes(app *web.App, cfg *Config) {
 	api := newApp(cfg)
 
 	app.HandlerFunc(http.MethodGet, "", "/api/auth/{provider}", api.authenticate)

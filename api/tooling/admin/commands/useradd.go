@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/mail"
 	"time"
@@ -17,7 +18,7 @@ import (
 )
 
 // UserAdd adds new users into the database.
-func UserAdd(log *logger.Logger, cfg sqldb.Config, nme string, email string, pass string) error {
+func UserAdd(log *logger.Logger, cfg *sqldb.Config, nme, email, pass string) (err error) {
 	if nme == "" || email == "" || pass == "" {
 		fmt.Println("help: useradd <name> <email> <password>")
 		return ErrHelp
@@ -27,7 +28,11 @@ func UserAdd(log *logger.Logger, cfg sqldb.Config, nme string, email string, pas
 	if err != nil {
 		return fmt.Errorf("connect database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing database: %w", cerr))
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -46,7 +51,7 @@ func UserAdd(log *logger.Logger, cfg sqldb.Config, nme string, email string, pas
 		Roles:    []role.Role{role.Admin, role.User},
 	}
 
-	usr, err := userBus.Create(ctx, uuid.UUID{}, nu)
+	usr, err := userBus.Create(ctx, uuid.UUID{}, &nu)
 	if err != nil {
 		return fmt.Errorf("create user: %w", err)
 	}

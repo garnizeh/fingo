@@ -5,13 +5,13 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 )
 
 // GenKey creates an x509 private/public key for auth tokens.
-func GenKey() error {
-
+func GenKey() (err error) {
 	// Generate a new private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -23,7 +23,11 @@ func GenKey() error {
 	if err != nil {
 		return fmt.Errorf("creating private file: %w", err)
 	}
-	defer privateFile.Close()
+	defer func() {
+		if cerr := privateFile.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing private file: %w", err))
+		}
+	}()
 
 	// Construct a PEM block for the private key.
 	privateBlock := pem.Block{
@@ -32,8 +36,8 @@ func GenKey() error {
 	}
 
 	// Write the private key to the private key file.
-	if err := pem.Encode(privateFile, &privateBlock); err != nil {
-		return fmt.Errorf("encoding to private file: %w", err)
+	if eerr := pem.Encode(privateFile, &privateBlock); eerr != nil {
+		return fmt.Errorf("encoding to private file: %w", eerr)
 	}
 
 	// Create a file for the public key information in PEM form.
@@ -41,7 +45,11 @@ func GenKey() error {
 	if err != nil {
 		return fmt.Errorf("creating public file: %w", err)
 	}
-	defer publicFile.Close()
+	defer func() {
+		if cerr := publicFile.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing public file: %w", err))
+		}
+	}()
 
 	// Marshal the public key from the private key to PKIX.
 	asn1Bytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)

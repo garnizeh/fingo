@@ -45,10 +45,10 @@ func (ec ErrCode) Equal(ec2 ErrCode) bool {
 
 // Error represents an error in the system.
 type Error struct {
-	Code     ErrCode `json:"code"`
 	Message  string  `json:"message"`
 	FuncName string  `json:"-"`
 	FileName string  `json:"-"`
+	Code     ErrCode `json:"code"`
 }
 
 // New constructs an error based on an app error.
@@ -81,9 +81,10 @@ func (e *Error) Error() string {
 }
 
 // Encode implements the encoder interface.
-func (e *Error) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(e)
-	return data, "application/json", err
+func (e *Error) Encode() (data []byte, contentType string, err error) {
+	data, err = json.Marshal(e)
+	contentType = "application/json"
+	return
 }
 
 // HTTPStatus implements the web package httpStatus interface so the

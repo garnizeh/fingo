@@ -18,21 +18,22 @@ type User struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
 	Email       string   `json:"email"`
-	Roles       []string `json:"roles"`
 	Department  string   `json:"department"`
-	Enabled     bool     `json:"enabled"`
 	DateCreated string   `json:"dateCreated"`
 	DateUpdated string   `json:"dateUpdated"`
+	Roles       []string `json:"roles"`
+	Enabled     bool     `json:"enabled"`
 }
 
 // Encode implements the encoder interface.
-func (app User) Encode() ([]byte, string, error) {
-	data, err := json.Marshal(app)
-	return data, "application/json", err
+func (app *User) Encode() (data []byte, comtentType string, err error) {
+	data, err = json.Marshal(app)
+	comtentType = "application/json"
+	return
 }
 
-func toAppUser(bus userbus.User) User {
-	return User{
+func toAppUser(bus *userbus.User) *User {
+	return &User{
 		ID:          bus.ID.String(),
 		Name:        bus.Name.String(),
 		Email:       bus.Email.Address,
@@ -46,8 +47,8 @@ func toAppUser(bus userbus.User) User {
 
 func toAppUsers(users []userbus.User) []User {
 	app := make([]User, len(users))
-	for i, usr := range users {
-		app[i] = toAppUser(usr)
+	for i := range users {
+		app[i] = *toAppUser(&users[i])
 	}
 
 	return app
@@ -59,10 +60,10 @@ func toAppUsers(users []userbus.User) []User {
 type NewUser struct {
 	Name            string   `json:"name"`
 	Email           string   `json:"email"`
-	Roles           []string `json:"roles"`
 	Department      string   `json:"department"`
 	Password        string   `json:"password"`
 	PasswordConfirm string   `json:"passwordConfirm"`
+	Roles           []string `json:"roles"`
 }
 
 // Decode implements the decoder interface.
@@ -70,7 +71,7 @@ func (app *NewUser) Decode(data []byte) error {
 	return json.Unmarshal(data, app)
 }
 
-func toBusNewUser(app NewUser) (userbus.NewUser, error) {
+func toBusNewUser(app *NewUser) (userbus.NewUser, error) {
 	var errors errs.FieldErrors
 
 	roles, err := role.ParseMany(app.Roles)

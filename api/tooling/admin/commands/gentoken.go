@@ -19,7 +19,7 @@ import (
 )
 
 // GenToken generates a JWT for the specified user.
-func GenToken(log *logger.Logger, dbConfig sqldb.Config, keyPath string, userID uuid.UUID, kid string) error {
+func GenToken(log *logger.Logger, dbConfig *sqldb.Config, keyPath string, userID uuid.UUID, kid string) (err error) {
 	if kid == "" {
 		fmt.Println("help: gentoken <user_id> <kid>")
 		return ErrHelp
@@ -29,7 +29,11 @@ func GenToken(log *logger.Logger, dbConfig sqldb.Config, keyPath string, userID 
 	if err != nil {
 		return fmt.Errorf("connect database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("closing database: %w", cerr))
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -91,7 +95,7 @@ func GenToken(log *logger.Logger, dbConfig sqldb.Config, keyPath string, userID 
 	// with need to be configured with the information found in the public key
 	// file to validate these claims. Dgraph does not support key rotate at
 	// this time.
-	token, err := ath.GenerateToken(kid, claims)
+	token, err := ath.GenerateToken(kid, &claims)
 	if err != nil {
 		return fmt.Errorf("generating token: %w", err)
 	}

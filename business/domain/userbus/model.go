@@ -12,32 +12,32 @@ import (
 
 // User represents information about an individual user.
 type User struct {
-	ID           uuid.UUID
-	Name         name.Name
+	DateCreated  time.Time
+	DateUpdated  time.Time
 	Email        mail.Address
+	Name         name.Name
 	Roles        []role.Role
 	PasswordHash []byte
 	Department   name.Null
+	ID           uuid.UUID
 	Enabled      bool
-	DateCreated  time.Time
-	DateUpdated  time.Time
 }
 
 // NewUser contains information needed to create a new user.
 type NewUser struct {
-	Name       name.Name
 	Email      mail.Address
+	Name       name.Name
+	Password   password.Password
 	Roles      []role.Role
 	Department name.Null
-	Password   password.Password
 }
 
 // UpdateUser contains information needed to update a user.
 type UpdateUser struct {
 	Name       *name.Name
 	Email      *mail.Address
-	Roles      []role.Role
 	Department *name.Null
 	Password   *password.Password
 	Enabled    *bool
+	Roles      []role.Role
 }

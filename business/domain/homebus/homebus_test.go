@@ -22,22 +22,22 @@ func Test_Home(t *testing.T) {
 
 	db := dbtest.New(t, "Test_Home")
 
-	sd, err := insertSeedData(db.BusDomain)
+	sd, err := insertSeedData(&db.BusDomain)
 	if err != nil {
 		t.Fatalf("Seeding error: %s", err)
 	}
 
 	// -------------------------------------------------------------------------
 
-	unittest.Run(t, query(db.BusDomain, sd), "query")
-	unittest.Run(t, create(db.BusDomain, sd), "create")
-	unittest.Run(t, update(db.BusDomain, sd), "update")
-	unittest.Run(t, delete(db.BusDomain, sd), "delete")
+	unittest.Run(t, query(&db.BusDomain, sd), "query")
+	unittest.Run(t, create(&db.BusDomain, sd), "create")
+	unittest.Run(t, update(&db.BusDomain, sd), "update")
+	unittest.Run(t, deleteHome(&db.BusDomain, sd), "delete")
 }
 
 // =============================================================================
 
-func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
+func insertSeedData(busDomain *dbtest.BusDomain) (unittest.SeedData, error) {
 	ctx := context.Background()
 
 	usrs, err := userbus.TestSeedUsers(ctx, 1, role.User, busDomain.User)
@@ -106,7 +106,7 @@ func insertSeedData(busDomain dbtest.BusDomain) (unittest.SeedData, error) {
 
 // =============================================================================
 
-func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func query(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	hmes := make([]homebus.Home, 0, len(sd.Admins[0].Homes)+len(sd.Users[0].Homes))
 	hmes = append(hmes, sd.Admins[0].Homes...)
 	hmes = append(hmes, sd.Users[0].Homes...)
@@ -183,14 +183,14 @@ func query(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func create(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name: "basic",
 			ExpResp: homebus.Home{
 				UserID: sd.Users[0].ID,
 				Type:   home.Single,
-				Address: homebus.Address{
+				Address: &homebus.Address{
 					Address1: "123 Mocking Bird Lane",
 					ZipCode:  "35810",
 					City:     "Huntsville",
@@ -202,7 +202,7 @@ func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 				nh := homebus.NewHome{
 					UserID: sd.Users[0].ID,
 					Type:   home.Single,
-					Address: homebus.Address{
+					Address: &homebus.Address{
 						Address1: "123 Mocking Bird Lane",
 						ZipCode:  "35810",
 						City:     "Huntsville",
@@ -211,7 +211,7 @@ func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 					},
 				}
 
-				resp, err := busDomain.Home.Create(ctx, nh)
+				resp, err := busDomain.Home.Create(ctx, &nh)
 				if err != nil {
 					return err
 				}
@@ -238,7 +238,7 @@ func create(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func update(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name: "basic",
@@ -246,7 +246,7 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 				ID:     sd.Users[0].Homes[0].ID,
 				UserID: sd.Users[0].ID,
 				Type:   home.Single,
-				Address: homebus.Address{
+				Address: &homebus.Address{
 					Address1: "123 Mocking Bird Lane",
 					Address2: "apt 105",
 					ZipCode:  "35810",
@@ -270,7 +270,7 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 					},
 				}
 
-				resp, err := busDomain.Home.Update(ctx, sd.Users[0].Homes[0], uh)
+				resp, err := busDomain.Home.Update(ctx, &sd.Users[0].Homes[0], uh)
 				if err != nil {
 					return err
 				}
@@ -295,13 +295,13 @@ func update(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	return table
 }
 
-func delete(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
+func deleteHome(busDomain *dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 	table := []unittest.Table{
 		{
 			Name:    "user",
 			ExpResp: nil,
 			ExcFunc: func(ctx context.Context) any {
-				if err := busDomain.Home.Delete(ctx, sd.Users[0].Homes[1]); err != nil {
+				if err := busDomain.Home.Delete(ctx, &sd.Users[0].Homes[1]); err != nil {
 					return err
 				}
 
@@ -315,7 +315,7 @@ func delete(busDomain dbtest.BusDomain, sd unittest.SeedData) []unittest.Table {
 			Name:    "admin",
 			ExpResp: nil,
 			ExcFunc: func(ctx context.Context) any {
-				if err := busDomain.Home.Delete(ctx, sd.Admins[0].Homes[1]); err != nil {
+				if err := busDomain.Home.Delete(ctx, &sd.Admins[0].Homes[1]); err != nil {
 					return err
 				}
 

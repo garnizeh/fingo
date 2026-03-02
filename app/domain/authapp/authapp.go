@@ -32,7 +32,7 @@ func (a *app) token(ctx context.Context, r *http.Request) web.Encoder {
 	// The BearerBasic middleware function generates the claims.
 	claims := mid.GetClaims(ctx)
 
-	tkn, err := a.auth.GenerateToken(kid, claims)
+	tkn, err := a.auth.GenerateToken(kid, &claims)
 	if err != nil {
 		return errs.New(errs.Internal, err)
 	}
@@ -54,7 +54,7 @@ func (a *app) authenticate(ctx context.Context, r *http.Request) web.Encoder {
 		Claims: mid.GetClaims(ctx),
 	}
 
-	return resp
+	return &resp
 }
 
 func (a *app) authorize(ctx context.Context, r *http.Request) web.Encoder {
@@ -63,7 +63,7 @@ func (a *app) authorize(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	if err := a.auth.Authorize(ctx, auth.Claims, auth.UserID, auth.Rule); err != nil {
+	if err := a.auth.Authorize(ctx, &auth.Claims, auth.UserID, auth.Rule); err != nil {
 		return errs.Errorf(errs.Unauthenticated, "authorize: you are not authorized for that action, claims[%v] rule[%v]", auth.Claims.Roles, auth.Rule)
 	}
 

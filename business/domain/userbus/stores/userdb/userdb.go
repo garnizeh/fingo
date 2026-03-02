@@ -48,7 +48,7 @@ func (s *Store) NewWithTx(tx sqldb.CommitRollbacker) (userbus.Storer, error) {
 }
 
 // Create inserts a new user into the database.
-func (s *Store) Create(ctx context.Context, usr userbus.User) error {
+func (s *Store) Create(ctx context.Context, usr *userbus.User) error {
 	const q = `
 	INSERT INTO users
 		(user_id, name, email, password_hash, roles, department, enabled, date_created, date_updated)
@@ -66,7 +66,7 @@ func (s *Store) Create(ctx context.Context, usr userbus.User) error {
 }
 
 // Update replaces a user document in the database.
-func (s *Store) Update(ctx context.Context, usr userbus.User) error {
+func (s *Store) Update(ctx context.Context, usr *userbus.User) error {
 	const q = `
 	UPDATE
 		users
@@ -92,7 +92,7 @@ func (s *Store) Update(ctx context.Context, usr userbus.User) error {
 }
 
 // Delete removes a user from the database.
-func (s *Store) Delete(ctx context.Context, usr userbus.User) error {
+func (s *Store) Delete(ctx context.Context, usr *userbus.User) error {
 	const q = `
 	DELETE FROM
 		users
@@ -185,7 +185,7 @@ func (s *Store) QueryByID(ctx context.Context, userID uuid.UUID) (userbus.User, 
 		return userbus.User{}, fmt.Errorf("db: %w", err)
 	}
 
-	return toBusUser(dbUsr)
+	return toBusUser(&dbUsr)
 }
 
 // QueryByEmail gets the specified user from the database by email.
@@ -212,5 +212,5 @@ func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (userbus.U
 		return userbus.User{}, fmt.Errorf("db: %w", err)
 	}
 
-	return toBusUser(dbUsr)
+	return toBusUser(&dbUsr)
 }

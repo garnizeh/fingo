@@ -7,8 +7,8 @@ import (
 )
 
 type testOption struct {
-	skip    bool
 	skipMsg string
+	skip    bool
 }
 
 type OptionFunc func(*testOption)

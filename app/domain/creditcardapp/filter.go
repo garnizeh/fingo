@@ -1,3 +1,4 @@
+// Package creditcardapp maintains the app layer api for the credit card domain.
 package creditcardapp
 
 import (
@@ -35,7 +36,7 @@ func parseQueryParams(r *http.Request) queryParams {
 	return filter
 }
 
-func parseFilter(qp queryParams) (creditcardbus.QueryFilter, error) {
+func (qp *queryParams) parseFilter() (creditcardbus.QueryFilter, error) {
 	var fieldErrors errs.FieldErrors
 	var filter creditcardbus.QueryFilter
 

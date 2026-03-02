@@ -7,7 +7,7 @@ import (
 	"github.com/garnizeh/fingo/business/domain/productbus"
 )
 
-func toAppProduct(prd productbus.Product) productapp.Product {
+func toAppProduct(prd *productbus.Product) productapp.Product {
 	return productapp.Product{
 		ID:          prd.ID.String(),
 		UserID:      prd.UserID.String(),
@@ -19,15 +19,15 @@ func toAppProduct(prd productbus.Product) productapp.Product {
 	}
 }
 
-func toAppProductPtr(prd productbus.Product) *productapp.Product {
+func toAppProductPtr(prd *productbus.Product) *productapp.Product {
 	appPrd := toAppProduct(prd)
 	return &appPrd
 }
 
 func toAppProducts(prds []productbus.Product) []productapp.Product {
 	items := make([]productapp.Product, len(prds))
-	for i, prd := range prds {
-		items[i] = toAppProduct(prd)
+	for i := range prds {
+		items[i] = toAppProduct(&prds[i])
 	}
 
 	return items

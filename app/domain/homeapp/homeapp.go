@@ -30,17 +30,17 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	nh, err := toBusNewHome(ctx, app)
+	nh, err := toBusNewHome(ctx, &app)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	hme, err := a.homeBus.Create(ctx, nh)
+	hme, err := a.homeBus.Create(ctx, &nh)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "create: hme[%+v]: %s", app, err)
 	}
 
-	return toAppHome(hme)
+	return toAppHome(&hme)
 }
 
 func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
@@ -49,7 +49,7 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	uh, err := toBusUpdateHome(app)
+	uh, err := toBusUpdateHome(&app)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
@@ -59,12 +59,12 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "home missing in context: %s", err)
 	}
 
-	updUsr, err := a.homeBus.Update(ctx, hme, uh)
+	updUsr, err := a.homeBus.Update(ctx, &hme, uh)
 	if err != nil {
 		return errs.Errorf(errs.Internal, "update: homeID[%s] uh[%+v]: %s", hme.ID, uh, err)
 	}
 
-	return toAppHome(updUsr)
+	return toAppHome(&updUsr)
 }
 
 func (a *app) delete(ctx context.Context, _ *http.Request) web.Encoder {
@@ -73,7 +73,7 @@ func (a *app) delete(ctx context.Context, _ *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "homeID missing in context: %s", err)
 	}
 
-	if err := a.homeBus.Delete(ctx, hme); err != nil {
+	if err := a.homeBus.Delete(ctx, &hme); err != nil {
 		return errs.Errorf(errs.Internal, "delete: homeID[%s]: %s", hme.ID, err)
 	}
 
@@ -88,9 +88,12 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("page", err)
 	}
 
-	filter, err := parseFilter(qp)
+	filter, err := qp.parseFilter()
 	if err != nil {
-		return err.(*errs.Error)
+		if enc, ok := err.(web.Encoder); ok {
+			return enc
+		}
+		return errs.New(errs.Internal, err)
 	}
 
 	orderBy, err := order.Parse(orderByFields, qp.OrderBy, homebus.DefaultOrderBy)
@@ -117,5 +120,5 @@ func (a *app) queryByID(ctx context.Context, _ *http.Request) web.Encoder {
 		return errs.Errorf(errs.Internal, "querybyid: %s", err)
 	}
 
-	return toAppHome(hme)
+	return toAppHome(&hme)
 }

@@ -26,7 +26,7 @@ type app struct {
 	apiHost  string
 }
 
-func newApp(cfg Config) *app {
+func newApp(cfg *Config) *app {
 	goth.UseProviders(
 		google.New(cfg.GoogleKey, cfg.GoogleSecret, fmt.Sprintf("%s/api/auth/google/callback", cfg.GoogleCallBackURL)),
 	)
@@ -67,7 +67,7 @@ func (a *app) authCallback(ctx context.Context, r *http.Request) web.Encoder {
 		Roles: []string{role.Admin.String()},
 	}
 
-	token, err := a.auth.GenerateToken(a.tokenKey, clms)
+	token, err := a.auth.GenerateToken(a.tokenKey, &clms)
 	if err != nil {
 		return errs.New(errs.Internal, err)
 	}

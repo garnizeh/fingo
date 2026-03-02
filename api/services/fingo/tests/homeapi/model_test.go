@@ -7,7 +7,7 @@ import (
 	"github.com/garnizeh/fingo/business/domain/homebus"
 )
 
-func toAppHome(hme homebus.Home) homeapp.Home {
+func toAppHome(hme *homebus.Home) homeapp.Home {
 	return homeapp.Home{
 		ID:     hme.ID.String(),
 		UserID: hme.UserID.String(),
@@ -27,14 +27,14 @@ func toAppHome(hme homebus.Home) homeapp.Home {
 
 func toAppHomes(homes []homebus.Home) []homeapp.Home {
 	items := make([]homeapp.Home, len(homes))
-	for i, hme := range homes {
-		items[i] = toAppHome(hme)
+	for i := range homes {
+		items[i] = toAppHome(&homes[i])
 	}
 
 	return items
 }
 
-func toAppHomePtr(hme homebus.Home) *homeapp.Home {
+func toAppHomePtr(hme *homebus.Home) *homeapp.Home {
 	appHme := toAppHome(hme)
 	return &appHme
 }
